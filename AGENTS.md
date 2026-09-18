@@ -58,6 +58,10 @@ file as off-limits just because bootstrap once seeded it.
   caller, pinned and bumped by Dependabot; it runs conflict-markers, action-pins,
   package-pins, docs-links, md-pairing, okf, okf-index, and file-caps against our
   own tree.
+- **Safety verdict via merge-safety:** this repo dogfoods `@rmartz/merge-safety`
+  through the [`merge-safety.yml`](.github/workflows/merge-safety.yml) caller,
+  pinned and bumped by Dependabot — the `merge-safety` check-run is the gate our
+  own GitHub-native auto-merge waits on (enabler vs. verdict).
 - **CI, releases, and labels are owned here:** typecheck / lint / format / test /
   build ([ci.yml](.github/workflows/ci.yml)), the PR-title lint + the
   `commit-convention` tripwire, release-please, and the hardened `dependabot.yml`
