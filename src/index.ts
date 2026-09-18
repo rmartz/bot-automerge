@@ -26,21 +26,95 @@ export function isBotAutomergeCommand(value: string | undefined): value is BotAu
   return value !== undefined && (BOT_AUTOMERGE_COMMANDS as readonly string[]).includes(value);
 }
 
-// TODO(teammate): the bot-eligibility classification contract (issue #264). The
-// intended shape, to be filled in when the enablement logic lands — see
-// docs/bot-automerge-contract.md:
+// ---------------------------------------------------------------------------
+// Bot-eligibility classification contract (issue #264)
 //
-//   - The trusted bot author set (e.g. `dependabot[bot]`, the release-please bot)
-//     that a PR must originate from to be eligible at all.
-//       export const TRUSTED_BOT_AUTHORS = [...] as const;
-//       export type TrustedBotAuthor = (typeof TRUSTED_BOT_AUTHORS)[number];
-//
-//   - The Dependabot semver update-type, parsed from the PR (only `patch` / `minor`
-//     bumps are auto-merge-eligible; `major` is held for human review).
-//       export type DependabotUpdateType = 'patch' | 'minor' | 'major';
-//
-//   - Release-please detection — whether a PR is a release-please "release PR"
-//     (also eligible), distinct from the Dependabot path.
-//       export interface BotPrClassification { ... }
-//
-// These are placeholders only; do not treat them as a shipped contract yet.
+// The stable, frozen surface the reusable workflow and consumers build against.
+// These constants are the detection signals; a package test pins them the way
+// merge-safety pins its check-run name, so a silent edit can't drift the fleet.
+// The classification *logic* over them lives in `bot-automerge.ts`.
+// ---------------------------------------------------------------------------
+
+/**
+ * The GitHub login of the Dependabot app account. A PR authored by this login
+ * takes the Dependabot classification path (its eligibility then turns on the
+ * caller-supplied semver update-type).
+ */
+export const DEPENDABOT_AUTHOR = 'dependabot[bot]';
+
+/**
+ * The head-branch prefix release-please gives its release PR (e.g.
+ * `release-please--branches--main`). Either this prefix OR the pending label
+ * below marks a PR as a release-please release PR.
+ */
+export const RELEASE_PLEASE_BRANCH_PREFIX = 'release-please--';
+
+/** The label release-please applies to its open release PR. */
+export const RELEASE_PLEASE_PENDING_LABEL = 'autorelease: pending';
+
+/**
+ * The Dependabot semver update-type, as emitted verbatim by
+ * `dependabot/fetch-metadata` (`steps.metadata.outputs.update-type`). This is
+ * the ONLY source of the update-type — the CLI takes it via `--update-type` and
+ * never re-derives it from the PR title (which would be brittle and could
+ * disagree with fetch-metadata).
+ */
+export const DEPENDABOT_UPDATE_TYPES = [
+  'version-update:semver-patch',
+  'version-update:semver-minor',
+  'version-update:semver-major',
+] as const;
+
+export type DependabotUpdateType = (typeof DEPENDABOT_UPDATE_TYPES)[number];
+
+/**
+ * The Dependabot update-types eligible for auto-merge: patch and minor only.
+ * Majors are potentially breaking and stay manual — a deliberate subset of
+ * {@link DEPENDABOT_UPDATE_TYPES}.
+ */
+export const AUTO_MERGE_ELIGIBLE_UPDATE_TYPES = [
+  'version-update:semver-patch',
+  'version-update:semver-minor',
+] as const;
+
+export type EligibleDependabotUpdateType = (typeof AUTO_MERGE_ELIGIBLE_UPDATE_TYPES)[number];
+
+/** Type guard: is `value` one of the three recognized Dependabot update-types? */
+export function isDependabotUpdateType(value: string | undefined): value is DependabotUpdateType {
+  return value !== undefined && (DEPENDABOT_UPDATE_TYPES as readonly string[]).includes(value);
+}
+
+/** Type guard: is `value` an auto-merge-eligible (patch/minor) update-type? */
+export function isEligibleDependabotUpdateType(
+  value: string | undefined,
+): value is EligibleDependabotUpdateType {
+  return (
+    value !== undefined && (AUTO_MERGE_ELIGIBLE_UPDATE_TYPES as readonly string[]).includes(value)
+  );
+}
+
+/**
+ * The kind of trustworthy bot PR bot-automerge recognizes. `dependabot` PRs are
+ * gated on their update-type; `release-please` release PRs are eligible as a
+ * whole. A PR matching neither is not a bot PR and is never eligible.
+ */
+export const BOT_PR_TYPES = ['dependabot', 'release-please'] as const;
+
+export type BotPrType = (typeof BOT_PR_TYPES)[number];
+
+/**
+ * The verdict `classifyBotPr` yields and the `--json` / `--dry-run` mode prints.
+ * This shape is the frozen decision contract:
+ * - `eligible` — true iff bot-automerge should enable native auto-merge.
+ * - `reason` — a one-line human-readable justification (positive or negative).
+ * - `prType` — the detected bot path, or `null` when the PR is not a bot PR.
+ * - `updateType` — the recognized Dependabot update-type, or `null` (always
+ *   `null` for release-please, unknown bots, or an unavailable/unrecognized
+ *   update-type).
+ */
+export interface BotAutomergeVerdict {
+  eligible: boolean;
+  reason: string;
+  prType: BotPrType | null;
+  updateType: DependabotUpdateType | null;
+}
