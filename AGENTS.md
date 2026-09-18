@@ -62,6 +62,13 @@ file as off-limits just because bootstrap once seeded it.
   through the [`merge-safety.yml`](.github/workflows/merge-safety.yml) caller,
   pinned and bumped by Dependabot — the `merge-safety` check-run is the gate our
   own GitHub-native auto-merge waits on (enabler vs. verdict).
+- **Auto-merge dogfoods bot-automerge itself:** the
+  [`automerge.yml`](.github/workflows/automerge.yml) caller pins the published
+  reusable workflow (Dependabot-bumped) and turns on native auto-merge for our own
+  eligible bot PRs — Dependabot patch/minor and release-please release PRs — which
+  merge once the ruleset's required checks (`merge-safety` + CI) pass. Full
+  continuous delivery: the release-please path merges via `RELEASE_PLEASE_PAT` so
+  `release.yml` re-fires (see [docs/consuming.md](docs/consuming.md) §3).
 - **CI, releases, and labels are owned here:** typecheck / lint / format / test /
   build ([ci.yml](.github/workflows/ci.yml)), the PR-title lint + the
   `commit-convention` tripwire, release-please, and the hardened `dependabot.yml`
