@@ -19,12 +19,12 @@ and `@rmartz/merge-safety` are:
    requires no fleet-wide status-check name. See
    [docs/bot-automerge-contract.md](docs/bot-automerge-contract.md).
 
-> **Status: scaffold.** This package is a compiling skeleton — the `enable`
-> command surface and the reusable-workflow shape are in place, but the
-> classification + enablement logic is a **STUB** tracked by
-> [ai-tools#264](https://github.com/rmartz/ai-tools/issues/264). See
+> **Status: implemented.** The `enable` classification — Dependabot `patch`/`minor`
+> bumps and release-please release PRs — and the reusable workflow are complete and
+> ship in `v0.1.0`, the first release to GitHub Packages. It was built per
+> [ai-tools#264](https://github.com/rmartz/ai-tools/issues/264); see
 > [docs/bot-automerge-contract.md](docs/bot-automerge-contract.md) for the
-> intended behavior.
+> eligibility contract.
 
 ## Using it in a consuming repo
 
@@ -37,13 +37,8 @@ triggers and runs with the intersection of granted and declared permissions:
 # .github/workflows/bot-automerge.yml
 name: bot-automerge
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-  workflow_dispatch:
-    inputs:
-      pr:
-        description: PR number to classify + enable auto-merge for
-        required: true
+  pull_request_target:
+    types: [opened, reopened, synchronize, labeled]
 permissions:
   contents: write
   pull-requests: write
@@ -51,9 +46,18 @@ jobs:
   bot-automerge:
     uses: rmartz/bot-automerge/.github/workflows/bot-automerge.yml@<sha> # vX.Y.Z
     with:
-      pr: ${{ github.event.pull_request.number || inputs.pr }}
+      pr: ${{ github.event.pull_request.number }}
     secrets: inherit
 ```
+
+It uses `pull_request_target` (not `pull_request`) because Dependabot PRs run with
+a read-only token, and enabling auto-merge needs base-context write.
+
+> **Require `merge-safety` + your CI checks on the default branch _before_ adopting
+> this.** `gh pr merge --auto` merges a PR immediately if the repo has no required
+> status checks — bot-automerge only makes a bot PR _eligible_ to auto-merge; the
+> repo's required checks are what it waits on. See the
+> [consumer setup guide](docs/consuming.md) for the full prerequisite.
 
 The public `@rmartz/bot-automerge` package on GitHub Packages is readable with the
 built-in `GITHUB_TOKEN`, so no consumer PAT is required.

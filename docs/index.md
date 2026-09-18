@@ -12,6 +12,6 @@ Documentation for `@rmartz/bot-automerge`, written in
 - [Setting up bot-automerge in a consuming repo](consuming.md) — the thin caller
   workflow, the write scopes it grants, and how the pin stays current.
 - [The bot-automerge eligibility contract](bot-automerge-contract.md) — the
-  intended bot-detection + eligibility classification contract (STUB / TODO).
+  bot-detection + eligibility classification contract.
 - [The OKF documentation format](okf-format.md) — how these pages are structured
   and validated in this repo.
