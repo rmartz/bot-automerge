@@ -99,6 +99,17 @@ jobs:
       # Any other author (release-please or another bot) — the CLI detects
       # release-please itself and no-ops on anything it does not trust. No
       # update-type is passed on this path.
+      #
+      # This path enables auto-merge with a real-actor PAT (the consumer's
+      # inherited RELEASE_PLEASE_PAT), NOT the job-level GITHUB_TOKEN. A
+      # release-please release PR merged via GITHUB_TOKEN is attributed to
+      # github-actions[bot], and GITHUB_TOKEN-attributed pushes do NOT trigger
+      # workflows — so the consumer's `release.yml` (`on: push`) would never
+      # re-fire and nothing would publish or tag. A PAT actor re-triggers it. Falls
+      # back to github.token when no PAT is provided (auto-merge still works, but
+      # release-PR CD won't re-trigger — see docs/consuming.md). Fixes #8.
       - name: Enable auto-merge (release-please / other bot)
         if: github.event.pull_request.user.login != 'dependabot[bot]'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_PAT || github.token }}
         run: ai-bot-automerge enable --pr "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}"
