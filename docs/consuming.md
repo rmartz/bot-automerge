@@ -1,7 +1,7 @@
 ---
 type: Reference
 title: Setting up bot-automerge in a consuming repo
-description: How to add the thin bot-automerge caller workflow to a repo, why it uses pull_request_target and grants write scopes, the required-checks prerequisite that keeps auto-merge safe, and how the SHA pin stays current via Dependabot.
+description: How to add the thin bot-automerge caller workflow to a repo, why it uses pull_request_target and grants write scopes, the required-checks prerequisite that keeps auto-merge safe, the RELEASE_PLEASE_PAT a release-please consumer needs for continuous delivery, and how the SHA pin stays current via Dependabot.
 tags: [consumer, setup, auto-merge]
 ---
 
@@ -67,8 +67,9 @@ Why each piece is there:
   requires.
 - **`labeled` is included** so that relabeling a held PR (for example, once a
   human clears it) re-triggers the eligibility check.
-- **`secrets: inherit`** — a safe default; the built-in `GITHUB_TOKEN`
-  (via `packages: read` in the reusable workflow) covers the public CLI install.
+- **`secrets: inherit`** — the built-in `GITHUB_TOKEN` (via `packages: read` in the
+  reusable workflow) covers the public CLI install, and it also passes through
+  `RELEASE_PLEASE_PAT` for the release-please continuous-delivery path (see §3).
 
 ## 2. Keep the pin current
 
@@ -96,3 +97,20 @@ keeps current.
 **Auth:** the published `@rmartz/bot-automerge` package is **public** on GitHub
 Packages, readable with the built-in `GITHUB_TOKEN` — the `packages: read`
 permission in the reusable workflow is all the install needs, no per-repo PAT.
+
+## 3. Release-please PRs and continuous delivery (a PAT is required)
+
+For **Dependabot** PRs the built-in `GITHUB_TOKEN` is enough. For **release-please
+release PRs**, `GITHUB_TOKEN` is **not** enough if you want continuous delivery: a
+release PR merged under `GITHUB_TOKEN` is attributed to `github-actions[bot]`, and
+**`GITHUB_TOKEN`-attributed pushes do not trigger workflows**, so your
+`release.yml` (`on: push`) never re-fires — the version bump lands but nothing is
+tagged or published.
+
+To fix this, provide a PAT as a repo secret named **`RELEASE_PLEASE_PAT`** (the
+same PAT release-please itself needs — `repo` + `workflow` scope). On the
+release-please path the reusable workflow uses `secrets.RELEASE_PLEASE_PAT` (via
+`secrets: inherit`) as the merge actor, so the merge re-triggers `release.yml` and
+CD completes. Without the secret it falls back to `GITHUB_TOKEN` — auto-merge still
+works, but release-PR CD will not re-trigger. Repos that do not use release-please
+(or do not auto-merge release PRs) need no PAT.
