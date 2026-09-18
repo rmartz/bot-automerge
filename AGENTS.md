@@ -9,10 +9,12 @@ counterpart to `@rmartz/merge-safety`'s safety verdict: bot-automerge classifies
 bot PR and, when eligible, runs `gh pr merge --auto --squash`. See
 [README.md](README.md) and the [documentation](docs/index.md).
 
-It was extracted per **rmartz/ai-tools#264**, mirroring the `rmartz/merge-safety`
-and `rmartz/repo-hygiene` splits. The `enable` command surface and the reusable
-workflow shape are in place; the classification + enablement logic is a **STUB**
-tracked by that issue.
+It was built per **rmartz/ai-tools#264**, mirroring the `rmartz/merge-safety`
+and `rmartz/repo-hygiene` splits. The `enable` classification (Dependabot
+`patch`/`minor` bumps and release-please release PRs) lives in `src/` and the
+reusable workflow in `.github/workflows/bot-automerge.yml`; both ship in `v0.1.0`.
+The eligibility contract is in
+[docs/bot-automerge-contract.md](docs/bot-automerge-contract.md).
 
 ## No check-run contract
 
@@ -20,7 +22,7 @@ Unlike `@rmartz/merge-safety`, bot-automerge posts **no check-run** and carries
 **no fleet check-run contract** — there is no name every consumer must require by
 string. It is purely an eligibility enabler: it reads a bot PR's metadata and,
 when the PR qualifies (a Dependabot patch/minor bump or a release-please release
-PR), flips on GitHub-native auto-merge. The intended classification rules live in
+PR), flips on GitHub-native auto-merge. The classification rules live in
 [docs/bot-automerge-contract.md](docs/bot-automerge-contract.md).
 
 ## Documentation — update it as part of every task
