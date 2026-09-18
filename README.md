@@ -42,6 +42,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  packages: read # install the CLI from GitHub Packages
 jobs:
   bot-automerge:
     uses: rmartz/bot-automerge/.github/workflows/bot-automerge.yml@<sha> # vX.Y.Z
@@ -51,7 +52,11 @@ jobs:
 ```
 
 It uses `pull_request_target` (not `pull_request`) because Dependabot PRs run with
-a read-only token, and enabling auto-merge needs base-context write.
+a read-only token, and enabling auto-merge needs base-context write. The
+`packages: read` grant is **required**, not optional: the reusable workflow
+declares it to install `@rmartz/bot-automerge` from GitHub Packages, and a called
+workflow can't request a permission its caller doesn't grant — omit it and GitHub
+fails the run at startup validation (no job, no auto-merge).
 
 > **Require `merge-safety` + your CI checks on the default branch _before_ adopting
 > this.** `gh pr merge --auto` merges a PR immediately if the repo has no required
