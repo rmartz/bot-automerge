@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/rmartz/bot-automerge/compare/bot-automerge-v0.1.0...bot-automerge-v0.1.1) (2026-09-18)
+
+
+### Bug Fixes
+
+* merge release-please PRs via an inherited PAT so CD re-triggers ([#9](https://github.com/rmartz/bot-automerge/issues/9)) ([80ad725](https://github.com/rmartz/bot-automerge/commit/80ad72572c5c037a450a03e899f584a4b6bc09ff))
+
 ## 0.1.0 (2026-09-18)
 
 
