@@ -114,3 +114,27 @@ release-please path the reusable workflow uses `secrets.RELEASE_PLEASE_PAT` (via
 CD completes. Without the secret it falls back to `GITHUB_TOKEN` — auto-merge still
 works, but release-PR CD will not re-trigger. Repos that do not use release-please
 (or do not auto-merge release PRs) need no PAT.
+
+## 4. The `auto-merge enabled` label
+
+When bot-automerge arms auto-merge on a PR, it also applies an **`auto-merge
+enabled`** label to it, so your other automation (triage, dashboards, a PR
+coordinator) can tell the PR is already owned by bot-automerge and skip it for
+manual merge handling. Applying the label uses the same `pull-requests: write`
+scope the caller already grants — no extra permission and no check-run.
+
+Labelling is **best-effort**: if the label does not exist in your repo, the `gh`
+call soft-fails and bot-automerge logs it and moves on — the auto-merge is already
+armed, so a missing label never fails the run. To make the signal reliable, **seed
+the label in your repo** so it is present before the first eligible PR:
+
+```bash
+ai-ensure-labels   # seeds the standard roster, including `auto-merge enabled`
+```
+
+or create it directly:
+
+```bash
+gh label create "auto-merge enabled" --color 1F883D \
+  --description "bot-automerge has enabled native auto-merge on this PR."
+```

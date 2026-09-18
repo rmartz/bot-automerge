@@ -15,7 +15,9 @@
 //   1 — ONLY an ungatherable/`gh` failure (PR unreadable, `gh pr merge` failed).
 //       On any failure we never enable auto-merge.
 import { ghCall, resolveRepoTarget } from '../lib/github.js';
+import { markPrHandled } from '../lib/automerge-label.js';
 import {
+  AUTOMERGE_HANDLED_LABEL,
   isBotAutomergeCommand,
   type BotAutomergeCommand,
   type BotAutomergeVerdict,
@@ -152,7 +154,15 @@ async function runEnable(repo: string, pr: number, args: Args): Promise<void> {
     process.exitCode = 1;
     return;
   }
-  console.log(`#${pr}: eligible — auto-merge enabled (${verdict.reason})`);
+
+  // Auto-merge is armed — mark the PR so external processes know bot-automerge
+  // owns it. Best-effort: a missing label (not yet in the repo's roster) is a
+  // non-fatal signal-not-set, never a reason to fail a run we already enabled.
+  const labeled = await markPrHandled(repo, pr, { cwd: args.cwd });
+  const labelNote = labeled
+    ? `; labeled "${AUTOMERGE_HANDLED_LABEL}"`
+    : `; could not apply "${AUTOMERGE_HANDLED_LABEL}" label (non-fatal)`;
+  console.log(`#${pr}: eligible — auto-merge enabled (${verdict.reason})${labelNote}`);
 }
 
 async function main(): Promise<void> {
