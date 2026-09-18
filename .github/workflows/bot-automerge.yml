@@ -1,23 +1,12 @@
 name: bot-automerge (reusable)
 
-# =============================================================================
-# TODO(teammate): wire real triggers/classification per issue #264
-# -----------------------------------------------------------------------------
-# This is a STUB reusable workflow. It establishes the distribution shape (a
-# `workflow_call` entry point consumers pin by SHA, a version input bumped in
-# lockstep with each release via release-please extra-files, and the install of
-# the published `@rmartz/bot-automerge` CLI from GitHub Packages) but does NOT
-# yet classify or enable auto-merge. The `enable` job currently only installs the
-# CLI and runs `ai-bot-automerge --help` as a placeholder.
-#
-# When implementing (see rmartz/ai-tools#264):
-#   - The caller carries the real triggers a reusable workflow cannot declare
-#     (`pull_request` for bot PRs, plus any `workflow_dispatch`), grants the write
-#     scopes below, and passes `secrets: inherit`. See docs/consuming.md.
-#   - `enable` classifies the PR — Dependabot patch/minor bumps and release-please
-#     release PRs are the eligible bot set (docs/bot-automerge-contract.md) — and,
-#     when eligible, runs `gh pr merge --auto --squash` to turn on GitHub-native
-#     auto-merge. Unlike @rmartz/merge-safety this posts NO check-run.
+# The single entry point consuming repos pin. Unlike a read-only hygiene check, a
+# consumer's caller is NOT trigger-free: a reusable workflow cannot declare its own
+# `on: pull_request_target`, so the caller carries the trigger, grants the write
+# scopes (contents / pull-requests), and passes `secrets: inherit`. The caller is
+# otherwise thin — the Dependabot-vs-other branch and the fetch-metadata step live
+# here, because a reusable workflow sees the caller's event context. See
+# docs/consuming.md.
 #
 #   jobs:
 #     bot-automerge:
@@ -30,7 +19,14 @@ name: bot-automerge (reusable)
 # propagate with no per-repo YAML edits. The @rmartz/bot-automerge version this
 # workflow installs is bumped in lockstep with each release (release-please
 # extra-files), so a pinned ref is fully reproducible.
-# =============================================================================
+#
+# bot-automerge posts NO check-run (unlike @rmartz/merge-safety) and carries no
+# fleet check-run contract. It is purely an eligibility ENABLER: the published
+# `ai-bot-automerge` CLI fetches the PR, decides eligibility (Dependabot
+# patch/minor bumps and release-please release PRs), and runs `gh pr merge --auto`
+# only when the PR qualifies. The actual merge still waits on the consuming repo's
+# own required status checks — see docs/consuming.md for the prerequisite that
+# every consumer MUST require merge-safety + CI on the default branch first.
 
 on:
   workflow_call:
@@ -54,6 +50,7 @@ on:
 permissions:
   contents: write # enable GitHub-native auto-merge on the PR
   pull-requests: write # read PR metadata + turn on auto-merge
+  packages: read # install the CLI from GitHub Packages
 
 concurrency:
   group: bot-automerge-${{ github.event.pull_request.number || inputs.pr }}
@@ -66,6 +63,8 @@ jobs:
     timeout-minutes: 5
     env:
       GH_TOKEN: ${{ github.token }}
+      # GITHUB_REPOSITORY is always set in Actions; pass it to the CLI explicitly
+      # because this job runs NO checkout, so cwd-based repo resolution would fail.
       PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}
     steps:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -79,6 +78,27 @@ jobs:
           # with the built-in GITHUB_TOKEN — no consumer PAT required.
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm install -g "@rmartz/bot-automerge@${{ inputs.version }}"
-      # TODO(teammate): replace this placeholder with the real classification +
-      # `ai-bot-automerge enable --pr "${PR_NUMBER}"` invocation (issue #264).
-      - run: ai-bot-automerge --help
+
+      # A Dependabot PR carries a semver update-type; fetch it and pass it so the
+      # CLI enables auto-merge only on patch/minor (majors stay manual). The guard
+      # keys off the PR author, which is robust across opened/synchronize/labeled —
+      # unlike github.actor, which can be a human who relabeled the PR.
+      - name: Fetch Dependabot metadata
+        id: metadata
+        if: github.event.pull_request.user.login == 'dependabot[bot]'
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto-merge (Dependabot)
+        if: github.event.pull_request.user.login == 'dependabot[bot]'
+        env:
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+        run: ai-bot-automerge enable --pr "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --update-type "${UPDATE_TYPE}"
+
+      # Any other author (release-please or another bot) — the CLI detects
+      # release-please itself and no-ops on anything it does not trust. No
+      # update-type is passed on this path.
+      - name: Enable auto-merge (release-please / other bot)
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
+        run: ai-bot-automerge enable --pr "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}"

@@ -1,7 +1,7 @@
 ---
 type: Reference
 title: Setting up bot-automerge in a consuming repo
-description: How to add the thin bot-automerge caller workflow to a repo, why it carries triggers and write scopes rather than being trigger-free, and how the SHA pin stays current via Dependabot.
+description: How to add the thin bot-automerge caller workflow to a repo, why it uses pull_request_target and grants write scopes, the required-checks prerequisite that keeps auto-merge safe, and how the SHA pin stays current via Dependabot.
 tags: [consumer, setup, auto-merge]
 ---
 
@@ -9,33 +9,36 @@ tags: [consumer, setup, auto-merge]
 
 This is the consumer-facing guide: how a repository adopts `@rmartz/bot-automerge`.
 Unlike a read-only hygiene check, bot-automerge's caller is **not** trigger-free —
-it carries the event triggers, grants write scopes, and passes secrets through —
+it carries the event trigger, grants write scopes, and passes secrets through —
 because a reusable workflow cannot declare its own `on:` triggers and runs with
 the _intersection_ of the caller-granted and workflow-declared permissions.
 
-> **Status: STUB.** The [reusable workflow](../.github/workflows/bot-automerge.yml)
-> installs the published CLI and runs `ai-bot-automerge --help` as a placeholder;
-> it does not yet classify PRs or enable auto-merge. The classification +
-> enablement logic is tracked by
-> [rmartz/ai-tools#264](https://github.com/rmartz/ai-tools/issues/264). The
-> caller shape below is what a consumer will pin once that logic lands.
+> **‼️ PREREQUISITE — require `merge-safety` + your CI checks on the default branch
+> BEFORE adopting this caller.** bot-automerge only turns on GitHub-native
+> auto-merge; it does **not** decide whether a PR is _safe_ to merge. And
+> `gh pr merge --auto` merges a PR **immediately** if the repo has **no required
+> status checks** — auto-merge with nothing to wait for is just a merge. So a repo
+> MUST have required status checks configured on its default branch before it
+> enables bot-automerge, or an eligible bot PR will merge the instant the caller
+> runs, unreviewed and unverified.
+>
+> The intended safety verdict is [`@rmartz/merge-safety`](https://github.com/rmartz/merge-safety):
+> adopt it (its `merge-safety` check-run **plus** your normal CI checks — build,
+> lint, test) as **required status checks** on the default branch first. The two
+> are complementary: **merge-safety is the safety VERDICT, bot-automerge is the
+> eligibility ENABLER.** Enable bot-automerge only once those required checks are
+> in place.
 
 ## 1. Add the caller workflow
 
-A consuming repo pins one thin caller workflow. Trigger it on the bot PRs you
-want auto-merge enabled for:
+A consuming repo pins one thin caller workflow:
 
 ```yaml
 # .github/workflows/bot-automerge.yml
 name: bot-automerge
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-  workflow_dispatch:
-    inputs:
-      pr:
-        description: PR number to classify + enable auto-merge for
-        required: true
+  pull_request_target:
+    types: [opened, reopened, synchronize, labeled]
 permissions:
   contents: write # enable GitHub-native auto-merge on the PR
   pull-requests: write # read PR metadata + turn on auto-merge
@@ -43,21 +46,27 @@ jobs:
   bot-automerge:
     uses: rmartz/bot-automerge/.github/workflows/bot-automerge.yml@<sha> # vX.Y.Z
     with:
-      pr: ${{ github.event.pull_request.number || inputs.pr }}
+      pr: ${{ github.event.pull_request.number }}
     secrets: inherit
 ```
 
 Why each piece is there:
 
-- **The caller carries the triggers.** A reusable workflow can't declare
-  `on: pull_request`; the caller does and passes the event context in. The
-  classification and enablement logic live inside the
-  [reusable workflow](../.github/workflows/bot-automerge.yml), so the caller
-  stays thin.
+- **`pull_request_target`, not `pull_request`.** Dependabot PRs (and other PRs
+  from forks) run the `pull_request` event with a **read-only** `GITHUB_TOKEN`,
+  which cannot enable auto-merge. `pull_request_target` runs in the **base
+  repository's context** with the write token this needs. The caller carries the
+  trigger because a reusable workflow can't declare `on:` itself; it passes the
+  event context in, and the Dependabot-vs-other branch and the `fetch-metadata`
+  step live inside the
+  [reusable workflow](../.github/workflows/bot-automerge.yml), so the caller stays
+  thin.
 - **Write scopes, not read-only.** Effective permissions are the intersection of
   caller-granted and workflow-declared, so the caller must grant the
   `contents: write` / `pull-requests: write` set that enabling native auto-merge
   requires.
+- **`labeled` is included** so that relabeling a held PR (for example, once a
+  human clears it) re-triggers the eligibility check.
 - **`secrets: inherit`** — a safe default; the built-in `GITHUB_TOKEN`
   (via `packages: read` in the reusable workflow) covers the public CLI install.
 
