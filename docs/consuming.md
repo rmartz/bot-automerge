@@ -42,6 +42,7 @@ on:
 permissions:
   contents: write # enable GitHub-native auto-merge on the PR
   pull-requests: write # read PR metadata + turn on auto-merge
+  packages: read # install the CLI from GitHub Packages
 jobs:
   bot-automerge:
     uses: rmartz/bot-automerge/.github/workflows/bot-automerge.yml@<sha> # vX.Y.Z
@@ -65,6 +66,13 @@ Why each piece is there:
   caller-granted and workflow-declared, so the caller must grant the
   `contents: write` / `pull-requests: write` set that enabling native auto-merge
   requires.
+- **`packages: read` is required, not optional.** The reusable workflow declares
+  `packages: read` to install the published `@rmartz/bot-automerge` CLI from GitHub
+  Packages. A called reusable workflow **cannot request a permission its caller
+  does not grant**, so a caller that omits `packages: read` makes GitHub fail the
+  run at **startup validation** — the job never starts, no auto-merge is enabled,
+  and the workflow appears to "do nothing." This is the same grant the
+  `@rmartz/merge-safety` and `@rmartz/repo-hygiene` callers already carry.
 - **`labeled` is included** so that relabeling a held PR (for example, once a
   human clears it) re-triggers the eligibility check.
 - **`secrets: inherit`** — the built-in `GITHUB_TOKEN` (via `packages: read` in the
