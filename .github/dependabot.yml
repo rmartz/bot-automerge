@@ -5,7 +5,11 @@ updates:
     schedule:
       interval: weekly
     commit-message:
-      prefix: chore
+      # `fix` (not `chore`) so a dependency bump cuts a patch release via
+      # release-please — `chore` bumps produce no release. This keeps the pinned
+      # reusable-workflow version (bumped in lockstep by release-please
+      # extra-files) moving as action pins are updated.
+      prefix: fix
       include: scope
     groups:
       # Minor/patch bumps batched; majors fall out into isolated PRs for review.
@@ -20,7 +24,9 @@ updates:
     schedule:
       interval: weekly
     commit-message:
-      prefix: chore
+      # `fix` (not `chore`) so a dependency bump cuts a patch release via
+      # release-please — `chore` bumps produce no release.
+      prefix: fix
       include: scope
     groups:
       # Prettier isolated into its own group so a reformatting bump can't hide in a
