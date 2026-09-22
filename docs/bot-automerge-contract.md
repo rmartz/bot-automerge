@@ -40,7 +40,9 @@ name.
 
 The PR is classified into one path, or none:
 
-1. **Dependabot** — author is exactly `dependabot[bot]`.
+1. **Dependabot** — author is the Dependabot app account. Both surface forms of
+   its login are accepted: `dependabot[bot]` (REST/GraphQL) and `app/dependabot`
+   (as the `gh` CLI reports it, which is what the `enable` path actually reads).
 2. **release-please** — the head branch starts with `release-please--` **OR** the
    PR carries the `autorelease: pending` label. (Release-please's PR author varies
    by setup, so detection keys off the branch/label markers, not the author.)
