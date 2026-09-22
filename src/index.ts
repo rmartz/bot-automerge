@@ -36,11 +36,33 @@ export function isBotAutomergeCommand(value: string | undefined): value is BotAu
 // ---------------------------------------------------------------------------
 
 /**
- * The GitHub login of the Dependabot app account. A PR authored by this login
- * takes the Dependabot classification path (its eligibility then turns on the
- * caller-supplied semver update-type).
+ * The GitHub login of the Dependabot app account in REST/GraphQL form. A PR
+ * authored by this login takes the Dependabot classification path (its
+ * eligibility then turns on the caller-supplied semver update-type).
  */
 export const DEPENDABOT_AUTHOR = 'dependabot[bot]';
+
+/**
+ * The same Dependabot author login as the `gh` CLI reports it. `gh pr view
+ * --json author` surfaces bot logins in `app/<slug>` form, not the REST/GraphQL
+ * `<slug>[bot]` form — so the CLI path (`ai-bot-automerge enable`, which reads
+ * the author via `gh`) sees this, and detection must accept it alongside
+ * {@link DEPENDABOT_AUTHOR}. (Missing this form is why every Dependabot PR was
+ * misclassified as "not a recognized bot PR" — issue #22.)
+ */
+export const DEPENDABOT_AUTHOR_GH_CLI = 'app/dependabot';
+
+/**
+ * Every author login that marks a PR as Dependabot-authored, across the two
+ * shapes GitHub surfaces the account under: REST/GraphQL {@link DEPENDABOT_AUTHOR}
+ * and `gh` CLI {@link DEPENDABOT_AUTHOR_GH_CLI}. Detection accepts either.
+ */
+export const DEPENDABOT_AUTHORS = [DEPENDABOT_AUTHOR, DEPENDABOT_AUTHOR_GH_CLI] as const;
+
+/** True when `login` is a recognized Dependabot author login (either surface form). */
+export function isDependabotAuthor(login: string): boolean {
+  return (DEPENDABOT_AUTHORS as readonly string[]).includes(login);
+}
 
 /**
  * The head-branch prefix release-please gives its release PR (e.g.
