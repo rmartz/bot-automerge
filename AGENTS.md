@@ -71,7 +71,8 @@ file as off-limits just because bootstrap once seeded it.
   release PR of its own to auto-merge; the classifier still recognizes
   release-please release PRs for consumers that produce them.)
 - **CI, releases, and labels are owned here:** typecheck / lint / format / test /
-  build ([ci.yml](.github/workflows/ci.yml)), the PR-title lint + the
+  build + a `Release dry-run` that validates the semantic-release config on PRs
+  ([ci.yml](.github/workflows/ci.yml)), the PR-title lint + the
   `commit-convention` tripwire, semantic-release, and the hardened `dependabot.yml`
   are all in place. `ai-ensure-labels` / `ai-verify-squash-setting` remain useful
   one-shot helpers, but this repo owns its `.github/` config going forward.

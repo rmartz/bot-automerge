@@ -93,7 +93,10 @@ Conventional-Commit history since the last `bot-automerge-v*` tag and, when a
 release is warranted, publishes the package to GitHub Packages (public) and
 creates the git tag + GitHub Release — no release PR and no commit-back, so the
 built-in `GITHUB_TOKEN` suffices. `tagFormat` stays `bot-automerge-v${version}`
-for continuity with the prior release-please tags.
+for continuity with the prior release-please tags. A `Release dry-run` CI job
+validates the semantic-release config (that the changelog toolchain renders) on
+every PR, so a broken release setup is caught before merge rather than on the
+post-merge release run.
 
 ---
 
