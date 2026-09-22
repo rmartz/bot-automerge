@@ -42,6 +42,7 @@ on:
 permissions:
   contents: write # enable GitHub-native auto-merge on the PR
   pull-requests: write # read PR metadata + turn on auto-merge
+  packages: read # install the CLI from GitHub Packages
 jobs:
   bot-automerge:
     uses: rmartz/bot-automerge/.github/workflows/bot-automerge.yml@<sha> # vX.Y.Z
@@ -61,10 +62,14 @@ Why each piece is there:
   step live inside the
   [reusable workflow](../.github/workflows/bot-automerge.yml), so the caller stays
   thin.
-- **Write scopes, not read-only.** Effective permissions are the intersection of
-  caller-granted and workflow-declared, so the caller must grant the
-  `contents: write` / `pull-requests: write` set that enabling native auto-merge
-  requires.
+- **Write scopes _and_ `packages: read`, not read-only.** Effective permissions
+  are the intersection of caller-granted and workflow-declared, and a called
+  reusable workflow can never obtain a permission its caller does not grant. So
+  the caller must grant the `contents: write` / `pull-requests: write` set that
+  enabling native auto-merge requires **and** the `packages: read` the reusable
+  workflow declares to install the CLI from GitHub Packages. Omitting
+  `packages: read` fails the run at **startup validation** (`startup_failure`) —
+  no job runs and no work happens at all — so all three scopes are mandatory.
 - **`labeled` is included** so that relabeling a held PR (for example, once a
   human clears it) re-triggers the eligibility check.
 - **`secrets: inherit`** — the built-in `GITHUB_TOKEN` (via `packages: read` in the
