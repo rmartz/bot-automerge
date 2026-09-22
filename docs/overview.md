@@ -37,6 +37,17 @@ metadata and, when the PR qualifies, flips on native auto-merge. The actual
 merge still waits on the repo's own required status checks (including
 merge-safety's, where that is adopted).
 
+## The `auto-merge enabled` label
+
+When bot-automerge arms native auto-merge on a PR, it also applies an
+**`auto-merge enabled`** label to it, so external processes (triage bots,
+dashboards, PR coordinators) can see the PR is already owned by bot-automerge and
+skip it for manual merge handling. It is a plain, human-visible issue label — not
+a required status — so it is **not** the check-run bot-automerge deliberately
+omits, and it never gates a merge. Labelling is best-effort; consumers seed the
+label through their label roster (`ai-ensure-labels` / `labels.yml`). See the
+[eligibility contract](bot-automerge-contract.md#what-enable-does--and-does-not-do).
+
 ## How the pieces fit
 
 - **[The eligibility contract](bot-automerge-contract.md)** — the bot-detection +

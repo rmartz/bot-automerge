@@ -25,6 +25,12 @@ when the PR qualifies (a Dependabot patch/minor bump or a release-please release
 PR), flips on GitHub-native auto-merge. The classification rules live in
 [docs/bot-automerge-contract.md](docs/bot-automerge-contract.md).
 
+When it arms auto-merge it also applies the **`auto-merge enabled`** label
+(`AUTOMERGE_HANDLED_LABEL`, pinned by a package test) so external processes know
+the PR is already handled. This is a plain, best-effort issue label — **not** the
+check-run bot-automerge omits, and it never gates a merge; consumers seed it via
+their label roster (`ai-ensure-labels` / `labels.yml`).
+
 ## Documentation — update it as part of every task
 
 Treat documentation as part of the change, not an afterthought. On **every**
