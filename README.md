@@ -42,6 +42,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  packages: read # install the CLI from GitHub Packages
 jobs:
   bot-automerge:
     uses: rmartz/bot-automerge/.github/workflows/bot-automerge.yml@<sha> # vX.Y.Z

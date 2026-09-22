@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/rmartz/bot-automerge/compare/bot-automerge-v0.1.1...bot-automerge-v0.1.2) (2026-09-22)
+
+
+### Bug Fixes
+
+* caller recipes must grant packages: read to avoid startup_failure ([#17](https://github.com/rmartz/bot-automerge/issues/17)) ([5f67f79](https://github.com/rmartz/bot-automerge/commit/5f67f79be9737d04a5e77d0537f85fad119717fb))
+
 ## [0.1.1](https://github.com/rmartz/bot-automerge/compare/bot-automerge-v0.1.0...bot-automerge-v0.1.1) (2026-09-18)
 
 
