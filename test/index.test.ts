@@ -3,6 +3,9 @@ import {
   BOT_AUTOMERGE_COMMANDS,
   isBotAutomergeCommand,
   DEPENDABOT_AUTHOR,
+  DEPENDABOT_AUTHOR_GH_CLI,
+  DEPENDABOT_AUTHORS,
+  isDependabotAuthor,
   RELEASE_PLEASE_BRANCH_PREFIX,
   RELEASE_PLEASE_PENDING_LABEL,
   DEPENDABOT_UPDATE_TYPES,
@@ -29,8 +32,10 @@ describe('bot-automerge package contract', () => {
 // which PRs auto-merge across every consumer. Pin them exactly, the way
 // merge-safety pins its check-run name.
 describe('classification contract constants', () => {
-  it('pins the Dependabot author login', () => {
+  it('pins both Dependabot author login forms (API and `gh` CLI)', () => {
     expect(DEPENDABOT_AUTHOR).toBe('dependabot[bot]');
+    expect(DEPENDABOT_AUTHOR_GH_CLI).toBe('app/dependabot');
+    expect(DEPENDABOT_AUTHORS).toEqual(['dependabot[bot]', 'app/dependabot']);
   });
 
   it('pins the release-please branch prefix and pending label', () => {
@@ -55,6 +60,20 @@ describe('classification contract constants', () => {
 
   it('pins the recognized bot PR types', () => {
     expect(BOT_PR_TYPES).toEqual(['dependabot', 'release-please']);
+  });
+});
+
+describe('isDependabotAuthor', () => {
+  it('accepts both the API and `gh` CLI login forms', () => {
+    expect(isDependabotAuthor('dependabot[bot]')).toBe(true);
+    expect(isDependabotAuthor('app/dependabot')).toBe(true);
+  });
+
+  it('rejects other bots and human authors', () => {
+    expect(isDependabotAuthor('renovate[bot]')).toBe(false);
+    expect(isDependabotAuthor('app/renovate')).toBe(false);
+    expect(isDependabotAuthor('octocat')).toBe(false);
+    expect(isDependabotAuthor('')).toBe(false);
   });
 });
 
