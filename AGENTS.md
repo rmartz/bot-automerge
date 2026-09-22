@@ -72,12 +72,13 @@ file as off-limits just because bootstrap once seeded it.
   [`automerge.yml`](.github/workflows/automerge.yml) caller pins the published
   reusable workflow (Dependabot-bumped) and turns on native auto-merge for our own
   eligible bot PRs — Dependabot patch/minor and release-please release PRs — which
-  merge once the ruleset's required checks (`merge-safety` + CI) pass. Full
-  continuous delivery: the release-please path merges via `RELEASE_PLEASE_PAT` so
-  `release.yml` re-fires (see [docs/consuming.md](docs/consuming.md) §3).
+  merge once the ruleset's required checks (`merge-safety` + CI) pass. (This repo's
+  own releases now publish inline on push via semantic-release, so it produces no
+  release PR of its own to auto-merge; the classifier still recognizes
+  release-please release PRs for consumers that produce them.)
 - **CI, releases, and labels are owned here:** typecheck / lint / format / test /
   build ([ci.yml](.github/workflows/ci.yml)), the PR-title lint + the
-  `commit-convention` tripwire, release-please, and the hardened `dependabot.yml`
+  `commit-convention` tripwire, semantic-release, and the hardened `dependabot.yml`
   are all in place. `ai-ensure-labels` / `ai-verify-squash-setting` remain useful
   one-shot helpers, but this repo owns its `.github/` config going forward.
 
@@ -123,10 +124,14 @@ Most are enforced by eslint; the intent:
 - **PR titles must be Conventional Commits** (`feat:`, `fix:`, `docs:`, `chore:`,
   …). The repo squash-merges using the **PR title**, so it is the only
   conventional subject that reaches `main` — a non-conventional title makes
-  release-please skip the release.
-- **Releases are automated** via release-please: merging its release PR tags the
-  version and publishes to GitHub Packages (public); the version installed by the
-  reusable workflow is bumped in lockstep via release-please `extra-files`.
+  semantic-release skip the release.
+- **Releases are automated** via semantic-release: a push to `main` analyzes the
+  Conventional-Commit history since the last `bot-automerge-v*` tag and, when a
+  release is warranted, publishes `@rmartz/bot-automerge` to GitHub Packages
+  (public) and creates the git tag + GitHub Release — no release PR, no
+  commit-back. The built-in `GITHUB_TOKEN` suffices (`packages: write`), and
+  `tagFormat` is pinned to `bot-automerge-v${version}` in `.releaserc.json` for
+  continuity with the prior release-please tags.
 
 ## Agent directive files
 
