@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/rmartz/bot-automerge/compare/bot-automerge-v0.1.2...bot-automerge-v0.1.3) (2026-09-22)
+
+
+### Bug Fixes
+
+* recognize the gh CLI Dependabot author login (`app/dependabot`) ([#23](https://github.com/rmartz/bot-automerge/issues/23)) ([dd77fda](https://github.com/rmartz/bot-automerge/commit/dd77fda0a6ade3d9e04e45aa9e7fc1e0c0f90306))
+
 ## [0.1.2](https://github.com/rmartz/bot-automerge/compare/bot-automerge-v0.1.1...bot-automerge-v0.1.2) (2026-09-22)
 
 
