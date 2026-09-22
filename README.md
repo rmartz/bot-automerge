@@ -42,6 +42,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  packages: read # install the CLI from GitHub Packages
 jobs:
   bot-automerge:
     uses: rmartz/bot-automerge/.github/workflows/bot-automerge.yml@<sha> # vX.Y.Z
@@ -87,9 +88,12 @@ pnpm run test         # vitest
 
 ## Releases
 
-Versioned by release-please. Merging its release PR tags the release and
-publishes the package to GitHub Packages (public); the version installed by the
-reusable workflow is bumped in lockstep via release-please `extra-files`.
+Versioned by [semantic-release](.releaserc.json). A push to `main` analyzes the
+Conventional-Commit history since the last `bot-automerge-v*` tag and, when a
+release is warranted, publishes the package to GitHub Packages (public) and
+creates the git tag + GitHub Release — no release PR and no commit-back, so the
+built-in `GITHUB_TOKEN` suffices. `tagFormat` stays `bot-automerge-v${version}`
+for continuity with the prior release-please tags.
 
 ---
 

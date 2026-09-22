@@ -3,7 +3,9 @@ name: bot-automerge (reusable)
 # The single entry point consuming repos pin. Unlike a read-only hygiene check, a
 # consumer's caller is NOT trigger-free: a reusable workflow cannot declare its own
 # `on: pull_request_target`, so the caller carries the trigger, grants the write
-# scopes (contents / pull-requests), and passes `secrets: inherit`. The caller is
+# scopes (contents / pull-requests) PLUS `packages: read` (a called workflow is
+# capped by its caller, so the caller MUST grant every scope declared below or the
+# run fails at startup validation), and passes `secrets: inherit`. The caller is
 # otherwise thin — the Dependabot-vs-other branch and the fetch-metadata step live
 # here, because a reusable workflow sees the caller's event context. See
 # docs/consuming.md.
@@ -40,7 +42,7 @@ on:
         description: '@rmartz/bot-automerge version to install (pinned to this release).'
         type: string
         required: false
-        default: 0.1.1 # x-release-please-version
+        default: 0.1.3 # x-release-please-version
       node-version:
         description: Node.js version to run under.
         type: string
