@@ -42,8 +42,15 @@ describe('isEvaluablePrState', () => {
 });
 
 describe('detectBotPrType', () => {
-  it('detects Dependabot by author', () => {
+  it('detects Dependabot by author (API `dependabot[bot]` form)', () => {
     expect(detectBotPrType(dependabotPr())).toBe('dependabot');
+  });
+
+  it('detects Dependabot by author (`gh` CLI `app/dependabot` form) — issue #22', () => {
+    // `gh pr view --json author` reports bot logins as `app/<slug>`, which is
+    // the login the `enable` path actually reads. This must classify the same
+    // as the API form, or every Dependabot PR is missed.
+    expect(detectBotPrType(dependabotPr({ author: 'app/dependabot' }))).toBe('dependabot');
   });
 
   it('detects release-please by branch prefix', () => {

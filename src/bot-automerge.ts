@@ -11,7 +11,8 @@
  *
  * The rules (see docs/bot-automerge-contract.md):
  *   1. A non-OPEN PR (closed/merged) is a no-op skip — never eligible.
- *   2. Author `dependabot[bot]` → the Dependabot path: eligible iff the
+ *   2. Author is Dependabot (`dependabot[bot]` via the API, or `app/dependabot`
+ *      via the `gh` CLI) → the Dependabot path: eligible iff the
  *      caller-supplied update-type is patch or minor; major is held for manual
  *      review; a missing/unrecognized update-type is fail-safe not-eligible (we
  *      never enable on an unconfirmed update-type).
@@ -25,9 +26,9 @@
  * not positively classify.
  */
 import {
-  DEPENDABOT_AUTHOR,
   RELEASE_PLEASE_BRANCH_PREFIX,
   RELEASE_PLEASE_PENDING_LABEL,
+  isDependabotAuthor,
   isDependabotUpdateType,
   isEligibleDependabotUpdateType,
   type BotAutomergeVerdict,
@@ -37,8 +38,9 @@ import {
 
 /**
  * The PR facts classification reads, as gathered from `gh pr view`. `author` is
- * the PR author's login (e.g. `dependabot[bot]`); `state` is `OPEN` / `CLOSED` /
- * `MERGED`.
+ * the PR author's login as `gh` reports it — bot logins take `app/<slug>` form
+ * (e.g. `app/dependabot`), not the API's `<slug>[bot]`; `state` is `OPEN` /
+ * `CLOSED` / `MERGED`.
  */
 export interface BotPrView {
   author: string;
@@ -62,7 +64,7 @@ export function isEvaluablePrState(state: string): boolean {
  * head-branch prefix or its pending label.
  */
 export function detectBotPrType(view: BotPrView): BotPrType | null {
-  if (view.author === DEPENDABOT_AUTHOR) return 'dependabot';
+  if (isDependabotAuthor(view.author)) return 'dependabot';
   if (
     view.headRefName.startsWith(RELEASE_PLEASE_BRANCH_PREFIX) ||
     view.labels.includes(RELEASE_PLEASE_PENDING_LABEL)
