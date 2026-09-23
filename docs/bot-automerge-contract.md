@@ -43,8 +43,7 @@ either bot path. A fork picks its own branch name, so it could otherwise pose as
 release-please PR (GHSA-39fm-72q5-676g). Genuine Dependabot and release-please
 branches always live in the base repository. The CLI reads `isCrossRepository`
 and `headRepository` from `gh pr view`. A missing field or a deleted head
-repository counts as a fork (fail safe). The reusable workflow also skips the job
-when the PR's head repository is not the base repository.
+repository counts as a fork (fail safe).
 
 Otherwise, the PR is classified into one path, or none:
 

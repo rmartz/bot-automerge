@@ -11,69 +11,46 @@ merge?", bot-automerge answers "is this a bot PR we trust enough to enable
 auto-merge on?". Unlike merge-safety, it posts **no check-run**.
 
 It is distributed the same way [`@rmartz/repo-hygiene`](https://github.com/rmartz/repo-hygiene)
-and `@rmartz/merge-safety` are:
+and `@rmartz/merge-safety` are — the package lives here, and consumers reach it
+through a separate action repo:
 
-1. **Updates propagate automatically.** Consuming repos pin one reusable workflow
-   by SHA; Dependabot's `github-actions` ecosystem opens PRs to bump that pin.
+1. **Updates propagate automatically.** Consuming repos pin
+   [`rmartz/bot-automerge-action`](https://github.com/rmartz/bot-automerge-action)
+   by SHA; Dependabot's `github-actions` ecosystem opens PRs to bump that pin. The
+   action pins this package's version in its own `package.json`, bumped by
+   Dependabot's `npm` ecosystem, so a new CLI release reaches consumers as an
+   action release.
 2. **No check-run contract.** bot-automerge is purely an eligibility enabler — it
    requires no fleet-wide status-check name. See
    [docs/bot-automerge-contract.md](docs/bot-automerge-contract.md).
 
 > **Status: implemented.** The `enable` classification — Dependabot `patch`/`minor`
-> bumps and release-please release PRs — and the reusable workflow are complete and
-> ship in `v0.1.0`, the first release to GitHub Packages. It was built per
+> bumps and release-please release PRs — shipped in `v0.1.0`, the first release to
+> GitHub Packages. It was built per
 > [ai-tools#264](https://github.com/rmartz/ai-tools/issues/264); see
 > [docs/bot-automerge-contract.md](docs/bot-automerge-contract.md) for the
 > eligibility contract.
 
 ## Using it in a consuming repo
 
-Add one caller workflow (this is what Dependabot keeps current). Unlike a
-read-only hygiene check, this caller carries the triggers, grants write scopes,
-and passes secrets through — because a reusable workflow can't declare its own
-triggers and runs with the intersection of granted and declared permissions:
-
-```yaml
-# .github/workflows/bot-automerge.yml
-name: bot-automerge
-on:
-  pull_request_target:
-    types: [opened, reopened, synchronize, labeled]
-permissions:
-  contents: write
-  pull-requests: write
-  packages: read # install the CLI from GitHub Packages
-jobs:
-  bot-automerge:
-    uses: rmartz/bot-automerge/.github/workflows/bot-automerge.yml@<sha> # vX.Y.Z
-    with:
-      pr: ${{ github.event.pull_request.number }}
-    secrets: inherit
-```
-
-It uses `pull_request_target` (not `pull_request`) because Dependabot PRs run with
-a read-only token, and enabling auto-merge needs base-context write.
+Use [`rmartz/bot-automerge-action`](https://github.com/rmartz/bot-automerge-action)
+— its [consumer guide](https://github.com/rmartz/bot-automerge-action/blob/main/docs/consuming.md)
+has the caller workflow, its permissions, and the `merge-safety` prerequisite.
+This repo no longer ships a reusable workflow; see
+[docs/consuming.md](docs/consuming.md) for what that means for existing callers.
 
 > **Require `merge-safety` + your CI checks on the default branch _before_ adopting
-> this.** `gh pr merge --auto` merges a PR immediately if the repo has no required
+> it.** `gh pr merge --auto` merges a PR immediately if the repo has no required
 > status checks — bot-automerge only makes a bot PR _eligible_ to auto-merge; the
-> repo's required checks are what it waits on. See the
-> [consumer setup guide](docs/consuming.md) for the full prerequisite.
-
-The public `@rmartz/bot-automerge` package on GitHub Packages is readable with the
-built-in `GITHUB_TOKEN`, so no consumer PAT is required.
-
-> For the full walkthrough — the caller's permissions, why it isn't trigger-free,
-> and how the pin stays current — see the
-> [consumer setup guide](docs/consuming.md).
+> repo's required checks are what it waits on.
 
 ## Requirements
 
 - Node.js >= 20.11
 - pnpm 9 (pinned via `packageManager`)
 
-Consuming repos need neither — the reusable workflow runs the published CLI on a
-GitHub-hosted runner.
+Consuming repos need neither — `rmartz/bot-automerge-action` runs the published
+CLI on a GitHub-hosted runner.
 
 ## Local development
 
