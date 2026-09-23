@@ -61,6 +61,11 @@ concurrency:
 jobs:
   enable:
     name: Enable auto-merge for an eligible bot PR
+    # Never act on a fork PR. A fork picks its own branch name, so it can pose as
+    # a release-please PR, and pull_request_target hands this job a write token
+    # (GHSA-39fm-72q5-676g). Genuine bot branches live in the base repo. The CLI
+    # also rejects cross-repository PRs; this guard covers older pinned versions.
+    if: github.event.pull_request == null || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
