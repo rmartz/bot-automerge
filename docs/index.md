@@ -9,8 +9,8 @@ Documentation for `@rmartz/bot-automerge`, written in
 
 - [What bot-automerge is](overview.md) — the eligibility enabler for trustworthy
   bot PRs, the `enable` operation, and how it differs from merge-safety.
-- [Setting up bot-automerge in a consuming repo](consuming.md) — the thin caller
-  workflow, the write scopes it grants, and how the pin stays current.
+- [Consuming bot-automerge](consuming.md) — consumers use
+  `rmartz/bot-automerge-action`; migrating off the retired reusable workflow.
 - [The bot-automerge eligibility contract](bot-automerge-contract.md) — the
   bot-detection + eligibility classification contract.
 - [The OKF documentation format](okf-format.md) — how these pages are structured
