@@ -48,7 +48,8 @@ from `main`, but **an existing SHA-pinned caller does not break**: GitHub loads 
 reusable workflow from the pinned commit, and release tags keep those commits
 reachable. That is the problem. Such a caller stays frozen on the CLI version its
 pinned commit hardcoded (0.1.x), never receives a later fix, and gives no signal
-that it is stale.
+that it is stale. A caller pinned to a commit before #32 also lacks the fork-PR
+guard for GHSA-39fm-72q5-676g, so migrate those first.
 
 Migrate every such caller explicitly. The smallest change is the action's
 reusable-workflow shape: point `uses:` at
