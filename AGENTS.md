@@ -2,17 +2,19 @@
 
 This repo is the standalone home of `@rmartz/bot-automerge`: the **eligibility
 enabler** that turns on GitHub-native auto-merge for trustworthy bot pull
-requests (Dependabot patch/minor bumps and release-please release PRs), plus the
-**reusable workflow** (`.github/workflows/bot-automerge.yml`) that distributes it
-to consuming repos — pinned by version and kept current by Dependabot. It is the
+requests (Dependabot patch/minor bumps and release-please release PRs). Consuming
+repos reach it through the separate
+[`rmartz/bot-automerge-action`](https://github.com/rmartz/bot-automerge-action)
+repo, which pins this package's version and is itself pinned by consumers and
+kept current by Dependabot. It is the
 counterpart to `@rmartz/merge-safety`'s safety verdict: bot-automerge classifies a
 bot PR and, when eligible, runs `gh pr merge --auto --squash`. See
 [README.md](README.md) and the [documentation](docs/index.md).
 
 It was built per **rmartz/ai-tools#264**, mirroring the `rmartz/merge-safety`
 and `rmartz/repo-hygiene` splits. The `enable` classification (Dependabot
-`patch`/`minor` bumps and release-please release PRs) lives in `src/` and the
-reusable workflow in `.github/workflows/bot-automerge.yml`; both ship in `v0.1.0`.
+`patch`/`minor` bumps and release-please release PRs) lives in `src/` and first
+shipped in `v0.1.0`.
 The eligibility contract is in
 [docs/bot-automerge-contract.md](docs/bot-automerge-contract.md).
 
@@ -69,15 +71,20 @@ file as off-limits just because bootstrap once seeded it.
   pinned and bumped by Dependabot — the `merge-safety` check-run is the gate our
   own GitHub-native auto-merge waits on (enabler vs. verdict).
 - **Auto-merge dogfoods bot-automerge itself:** the
-  [`automerge.yml`](.github/workflows/automerge.yml) caller pins the published
-  reusable workflow (Dependabot-bumped) and turns on native auto-merge for our own
-  eligible bot PRs — Dependabot patch/minor and release-please release PRs — which
-  merge once the ruleset's required checks (`merge-safety` + CI) pass. (This repo's
-  own releases now publish inline on push via semantic-release, so it produces no
-  release PR of its own to auto-merge; the classifier still recognizes
-  release-please release PRs for consumers that produce them.)
+  [`automerge.yml`](.github/workflows/automerge.yml) caller pins
+  `rmartz/bot-automerge-action`'s reusable workflow (Dependabot-bumped) — exactly
+  as any consumer does — and turns on native auto-merge for our own eligible bot
+  PRs, which merge once the ruleset's required checks (`merge-safety` + CI) pass.
+- **No reusable workflow or version pin lives here.** The in-repo reusable
+  workflow was retired in #18 Phase 2; distribution is
+  `rmartz/bot-automerge-action`'s job, and the CLI version consumers run is the
+  one that repo's `package.json` pins (Dependabot `npm`-bumped). Do not
+  reintroduce a workflow here that hardcodes this package's version — nothing
+  would update it. A delay between a CLI release here and the action's bump is
+  ordinary weekly Dependabot lag, not a bug.
 - **CI, releases, and labels are owned here:** typecheck / lint / format / test /
-  build ([ci.yml](.github/workflows/ci.yml)), the PR-title lint + the
+  build + a `Release dry-run` that validates the semantic-release config on PRs
+  ([ci.yml](.github/workflows/ci.yml)), the PR-title lint + the
   `commit-convention` tripwire, semantic-release, and the hardened `dependabot.yml`
   are all in place. `ai-ensure-labels` / `ai-verify-squash-setting` remain useful
   one-shot helpers, but this repo owns its `.github/` config going forward.

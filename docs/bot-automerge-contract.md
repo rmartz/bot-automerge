@@ -8,7 +8,7 @@ tags: [bot-automerge, auto-merge, contract, classification]
 # The bot-automerge eligibility contract
 
 bot-automerge enables GitHub-native auto-merge only for **trustworthy bot PRs**.
-Eligibility is a pure classification over a PR's author, head branch, labels, and
+Eligibility is a pure classification over a PR's author, head branch, head repository, labels, and
 state, plus — for Dependabot — a caller-supplied semver update-type. The predicate
 lives in [`src/bot-automerge.ts`](../src/bot-automerge.ts) (`classifyBotPr`); its
 contract constants and the verdict shape live in [`src/index.ts`](../src/index.ts)
@@ -38,7 +38,14 @@ name.
 
 ## Bot detection
 
-The PR is classified into one path, or none:
+A **cross-repository (fork) PR is never eligible**, and this is checked before
+either bot path. A fork picks its own branch name, so it could otherwise pose as a
+release-please PR (GHSA-39fm-72q5-676g). Genuine Dependabot and release-please
+branches always live in the base repository. The CLI reads `isCrossRepository`
+and `headRepository` from `gh pr view`. A missing field or a deleted head
+repository counts as a fork (fail safe).
+
+Otherwise, the PR is classified into one path, or none:
 
 1. **Dependabot** — author is the Dependabot app account. Both surface forms of
    its login are accepted: `dependabot[bot]` (REST/GraphQL) and `app/dependabot`

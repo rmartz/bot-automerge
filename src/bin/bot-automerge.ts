@@ -78,6 +78,9 @@ interface PrView {
   number: number;
   author: { login: string } | null;
   headRefName: string;
+  isCrossRepository?: boolean;
+  /** `null` when the head repository was deleted. */
+  headRepository?: { id: string } | null;
   labels: { name: string }[];
   state: string;
 }
@@ -93,7 +96,7 @@ async function fetchPrView(repo: string, pr: number, cwd?: string): Promise<PrVi
       '--repo',
       repo,
       '--json',
-      'number,author,headRefName,labels,state',
+      'number,author,headRefName,headRepository,isCrossRepository,labels,state',
     ],
     cwd,
   );
@@ -128,6 +131,8 @@ async function runEnable(repo: string, pr: number, args: Args): Promise<void> {
   const prView: BotPrView = {
     author: view.author?.login ?? '',
     headRefName: view.headRefName,
+    // Fail safe: a missing field or a deleted head repository counts as a fork.
+    isCrossRepository: view.isCrossRepository !== false || !view.headRepository,
     labels: view.labels.map((l) => l.name),
     state: view.state,
   };

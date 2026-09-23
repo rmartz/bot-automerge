@@ -1,13 +1,12 @@
 {
   "name": "@rmartz/bot-automerge",
   "version": "0.0.0-development",
-  "description": "Enables GitHub-native auto-merge for trustworthy bot pull requests (Dependabot patch/minor bumps and release-please release PRs), distributed via a reusable workflow kept current by Dependabot.",
+  "description": "Enables GitHub-native auto-merge for trustworthy bot pull requests (Dependabot patch/minor bumps and release-please release PRs), distributed via rmartz/bot-automerge-action.",
   "keywords": [
     "ci",
     "bot-automerge",
     "auto-merge",
     "github-actions",
-    "reusable-workflow",
     "dependabot"
   ],
   "homepage": "https://github.com/rmartz/bot-automerge#readme",

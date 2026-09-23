@@ -9,7 +9,7 @@
  *
  * The classification + enablement implementation (and the `ai-bot-automerge` bin)
  * lives alongside it; this module is intentionally the narrow, frozen surface the
- * reusable workflow and consumers depend on. Extracted per rmartz/ai-tools#264.
+ * bot-automerge-action and consumers depend on. Extracted per rmartz/ai-tools#264.
  */
 
 /**
@@ -29,7 +29,7 @@ export function isBotAutomergeCommand(value: string | undefined): value is BotAu
 // ---------------------------------------------------------------------------
 // Bot-eligibility classification contract (issue #264)
 //
-// The stable, frozen surface the reusable workflow and consumers build against.
+// The stable, frozen surface bot-automerge-action and consumers build against.
 // These constants are the detection signals; a package test pins them the way
 // merge-safety pins its check-run name, so a silent edit can't drift the fleet.
 // The classification *logic* over them lives in `bot-automerge.ts`.

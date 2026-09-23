@@ -15,8 +15,8 @@ which computes the pre-auto-merge **safety verdict**. Where merge-safety answers
 "is it safe to merge this PR?", bot-automerge answers "is this a bot PR we trust
 enough to enable auto-merge on in the first place?".
 
-It ships as one CLI, `ai-bot-automerge`, with a single operation that the
-[reusable workflow](consuming.md) dispatches:
+It ships as one CLI, `ai-bot-automerge`, with a single operation that
+[`rmartz/bot-automerge-action`](consuming.md) dispatches:
 
 ## `enable` — one bot PR
 
@@ -52,6 +52,6 @@ label through their label roster (`ai-ensure-labels` / `labels.yml`). See the
 
 - **[The eligibility contract](bot-automerge-contract.md)** — the bot-detection +
   eligibility classification rules.
-- **[Setting up bot-automerge in a consuming repo](consuming.md)** — the caller
-  workflow, its `pull_request_target` trigger, and the required-checks
-  prerequisite that keeps auto-merge safe.
+- **[Consuming bot-automerge](consuming.md)** — consumers use
+  `rmartz/bot-automerge-action`; how the CLI version reaches them and how to
+  migrate off the retired reusable workflow.
