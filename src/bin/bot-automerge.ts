@@ -15,7 +15,9 @@
 //   1 — ONLY an ungatherable/`gh` failure (PR unreadable, `gh pr merge` failed).
 //       On any failure we never enable auto-merge.
 import { ghCall, resolveRepoTarget } from '../lib/github.js';
+import { markPrHandled } from '../lib/automerge-label.js';
 import {
+  AUTOMERGE_HANDLED_LABEL,
   isBotAutomergeCommand,
   type BotAutomergeCommand,
   type BotAutomergeVerdict,
@@ -76,6 +78,9 @@ interface PrView {
   number: number;
   author: { login: string } | null;
   headRefName: string;
+  isCrossRepository?: boolean;
+  /** `null` when the head repository was deleted. */
+  headRepository?: { id: string } | null;
   labels: { name: string }[];
   state: string;
 }
@@ -91,7 +96,7 @@ async function fetchPrView(repo: string, pr: number, cwd?: string): Promise<PrVi
       '--repo',
       repo,
       '--json',
-      'number,author,headRefName,labels,state',
+      'number,author,headRefName,headRepository,isCrossRepository,labels,state',
     ],
     cwd,
   );
@@ -126,6 +131,8 @@ async function runEnable(repo: string, pr: number, args: Args): Promise<void> {
   const prView: BotPrView = {
     author: view.author?.login ?? '',
     headRefName: view.headRefName,
+    // Fail safe: a missing field or a deleted head repository counts as a fork.
+    isCrossRepository: view.isCrossRepository !== false || !view.headRepository,
     labels: view.labels.map((l) => l.name),
     state: view.state,
   };
@@ -152,7 +159,15 @@ async function runEnable(repo: string, pr: number, args: Args): Promise<void> {
     process.exitCode = 1;
     return;
   }
-  console.log(`#${pr}: eligible — auto-merge enabled (${verdict.reason})`);
+
+  // Auto-merge is armed — mark the PR so external processes know bot-automerge
+  // owns it. Best-effort: a missing label (not yet in the repo's roster) is a
+  // non-fatal signal-not-set, never a reason to fail a run we already enabled.
+  const labeled = await markPrHandled(repo, pr, { cwd: args.cwd });
+  const labelNote = labeled
+    ? `; labeled "${AUTOMERGE_HANDLED_LABEL}"`
+    : `; could not apply "${AUTOMERGE_HANDLED_LABEL}" label (non-fatal)`;
+  console.log(`#${pr}: eligible — auto-merge enabled (${verdict.reason})${labelNote}`);
 }
 
 async function main(): Promise<void> {

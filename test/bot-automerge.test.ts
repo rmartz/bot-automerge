@@ -16,6 +16,7 @@ function dependabotPr(overrides: Partial<BotPrView> = {}): BotPrView {
   return {
     author: 'dependabot[bot]',
     headRefName: 'dependabot/npm_and_yarn/lodash-4.17.21',
+    isCrossRepository: false,
     labels: ['dependencies'],
     state: 'OPEN',
     ...overrides,
@@ -27,6 +28,7 @@ function releasePleasePr(overrides: Partial<BotPrView> = {}): BotPrView {
   return {
     author: 'github-actions[bot]',
     headRefName: 'release-please--branches--main',
+    isCrossRepository: false,
     labels: ['autorelease: pending'],
     state: 'OPEN',
     ...overrides,
@@ -68,12 +70,19 @@ describe('detectBotPrType', () => {
       detectBotPrType({
         author: 'renovate[bot]',
         headRefName: 'renovate/x',
+        isCrossRepository: false,
         labels: [],
         state: 'OPEN',
       }),
     ).toBe(null);
     expect(
-      detectBotPrType({ author: 'octocat', headRefName: 'feature/x', labels: [], state: 'OPEN' }),
+      detectBotPrType({
+        author: 'octocat',
+        headRefName: 'feature/x',
+        isCrossRepository: false,
+        labels: [],
+        state: 'OPEN',
+      }),
     ).toBe(null);
   });
 });
@@ -151,6 +160,7 @@ describe('classifyBotPr — non-bot PRs', () => {
     const v = classifyBotPr({
       author: 'renovate[bot]',
       headRefName: 'renovate/lodash',
+      isCrossRepository: false,
       labels: [],
       state: 'OPEN',
     });
@@ -166,11 +176,38 @@ describe('classifyBotPr — non-bot PRs', () => {
     const v = classifyBotPr({
       author: 'octocat',
       headRefName: 'feature/thing',
+      isCrossRepository: false,
       labels: [],
       state: 'OPEN',
     });
     expect(v.eligible).toBe(false);
     expect(v.prType).toBe(null);
+  });
+});
+
+describe('classifyBotPr — fork PRs are never eligible (GHSA-39fm-72q5-676g)', () => {
+  const FORK_VERDICT = {
+    eligible: false,
+    reason: 'PR is from a fork (cross-repository) — never eligible',
+    prType: null,
+    updateType: null,
+  };
+
+  it('rejects a fork PR with a release-please-- branch', () => {
+    const v = classifyBotPr(releasePleasePr({ isCrossRepository: true, labels: [] }));
+    expect(v).toEqual(FORK_VERDICT);
+  });
+
+  it('rejects a fork PR carrying the autorelease: pending label', () => {
+    const v = classifyBotPr(
+      releasePleasePr({ isCrossRepository: true, headRefName: 'chore/release' }),
+    );
+    expect(v).toEqual(FORK_VERDICT);
+  });
+
+  it('rejects a cross-repository PR on the Dependabot path too', () => {
+    const v = classifyBotPr(dependabotPr({ isCrossRepository: true }), PATCH);
+    expect(v).toEqual(FORK_VERDICT);
   });
 });
 

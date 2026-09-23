@@ -8,7 +8,7 @@ tags: [bot-automerge, auto-merge, contract, classification]
 # The bot-automerge eligibility contract
 
 bot-automerge enables GitHub-native auto-merge only for **trustworthy bot PRs**.
-Eligibility is a pure classification over a PR's author, head branch, labels, and
+Eligibility is a pure classification over a PR's author, head branch, head repository, labels, and
 state, plus — for Dependabot — a caller-supplied semver update-type. The predicate
 lives in [`src/bot-automerge.ts`](../src/bot-automerge.ts) (`classifyBotPr`); its
 contract constants and the verdict shape live in [`src/index.ts`](../src/index.ts)
@@ -38,7 +38,14 @@ name.
 
 ## Bot detection
 
-The PR is classified into one path, or none:
+A **cross-repository (fork) PR is never eligible**, and this is checked before
+either bot path. A fork picks its own branch name, so it could otherwise pose as a
+release-please PR (GHSA-39fm-72q5-676g). Genuine Dependabot and release-please
+branches always live in the base repository. The CLI reads `isCrossRepository`
+and `headRepository` from `gh pr view`. A missing field or a deleted head
+repository counts as a fork (fail safe).
+
+Otherwise, the PR is classified into one path, or none:
 
 1. **Dependabot** — author is the Dependabot app account. Both surface forms of
    its login are accepted: `dependabot[bot]` (REST/GraphQL) and `app/dependabot`
@@ -84,11 +91,24 @@ merge-safety's guard so a post-merge event can't trigger a spurious action.
 ## What `enable` does — and does not do
 
 When the verdict is `eligible`, the `ai-bot-automerge enable` command turns on
-GitHub-native auto-merge (`gh pr merge --auto --squash <pr>`). It does **not**:
+GitHub-native auto-merge (`gh pr merge --auto --squash <pr>`) and then applies the
+**`auto-merge enabled`** label to the PR (the `AUTOMERGE_HANDLED_LABEL` constant,
+pinned by a package test). The label is a signal for **external processes** —
+triage bots, dashboards, PR coordinators — that the PR is already owned by
+bot-automerge and need not be routed for manual merge handling.
+
+Labelling is **best-effort and additive**: it uses the caller's existing
+`pull-requests: write` scope, and a soft failure (e.g. the label is not yet in the
+consumer's roster) is non-fatal — the auto-merge is already armed, so a missing
+label is logged, not fatal. Consumers seed the label through their label roster
+(`ai-ensure-labels` / `labels.yml`); see [consuming.md](consuming.md).
+
+`enable` does **not**:
 
 - **Post a check-run.** Unlike [`@rmartz/merge-safety`](overview.md), bot-automerge
   carries no fleet check-run contract. There is no name every consumer must
-  require by string.
+  require by string. The `auto-merge enabled` label is a plain, human-visible
+  issue label — not a required status — so it never gates a merge.
 - **Merge immediately.** Native auto-merge still waits on the repo's own required
   status checks (including merge-safety's, where adopted). bot-automerge only
   makes the PR _eligible_ to merge itself once those pass.
