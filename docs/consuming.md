@@ -92,12 +92,26 @@ updates:
 ```
 
 **Use a plain `# vX.Y.Z` version comment** on the pin — e.g.
-`…/bot-automerge.yml@<sha> # v0.1.0` — **not** the component-scoped tag name. That
-is the form Dependabot's `github-actions` ecosystem tracks to re-bump the SHA +
-comment together, and the form that consumer pin-linters requiring a full
+`…/bot-automerge.yml@<sha> # v0.2.1`. Releases are tagged `vX.Y.Z`, which is the
+form Dependabot's `github-actions` ecosystem tracks to re-bump the SHA + comment
+together, and the form that consumer pin-linters requiring a full
 `vMAJOR.MINOR.PATCH` comment accept. This is exactly how this repo pins its own
 `@rmartz/repo-hygiene` caller — `hygiene.yml@<sha> # v1.0.1` — a pin Dependabot
-keeps current.
+keeps current. (Releases up to v0.2.0 were tagged `bot-automerge-vX.Y.Z`. Each
+also has a `vX.Y.Z` alias on the same commit, so existing pins keep working.)
+
+**The pin also selects the CLI version.** The reusable workflow does not
+hardcode the `@rmartz/bot-automerge` version it installs. At runtime it looks up
+the release tag on its own pinned commit (`job.workflow_sha`) and installs that
+version. So a Dependabot bump of the `@<sha>` pin upgrades the workflow **and**
+the CLI together, with no per-repo edit. Two consequences:
+
+- **Pin a release commit.** If no release tag points at the pinned SHA (a branch
+  or an arbitrary commit), the run fails and names the SHA. Dependabot only ever
+  pins release commits.
+- **Leave the `version:` input unset.** It is an escape hatch that overrides the
+  resolved version, but Dependabot does not track it, so a hardcoded value goes
+  stale — the same trap as the old baked-in default. Use it only temporarily.
 
 **Auth:** the published `@rmartz/bot-automerge` package is **public** on GitHub
 Packages, readable with the built-in `GITHUB_TOKEN` — the `packages: read`

@@ -1,13 +1,18 @@
 name: Release
 
 # Automated releases via semantic-release. On every push to main it analyzes the
-# Conventional-Commit history since the last `bot-automerge-v*` tag and, when a
-# release is warranted, builds and publishes @rmartz/bot-automerge to GitHub
-# Packages (public), then creates the git tag + GitHub Release. It commits NOTHING
-# back to the repo (no @semantic-release/git), so the built-in GITHUB_TOKEN
-# suffices (it has packages:write) — no PAT. `tagFormat` is pinned to
-# `bot-automerge-v${version}` in .releaserc.json for continuity with the prior
-# release-please tags, so semantic-release resumes from bot-automerge-v0.1.1.
+# Conventional-Commit history since the last `v*` tag and, when a release is
+# warranted, builds and publishes @rmartz/bot-automerge to GitHub Packages
+# (public), then creates the git tag + GitHub Release. It commits NOTHING back to
+# the repo (no @semantic-release/git), so the built-in GITHUB_TOKEN suffices (it
+# has packages:write) — no PAT, and no bypass of the main-branch ruleset.
+#
+# The version is carried by the tag alone. The reusable bot-automerge.yml resolves
+# the CLI version it installs from the release tag on its own pinned commit
+# (job.workflow_sha), so nothing in the tree needs bumping per release. Tags are
+# plain `v${version}` (.releaserc.json) — the form Dependabot's github-actions
+# ecosystem resolves when it bumps consumers' `@<sha> # vX.Y.Z` pins. The legacy
+# `bot-automerge-vX.Y.Z` tags remain for existing pins.
 
 on:
   push:

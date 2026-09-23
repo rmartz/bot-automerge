@@ -19,8 +19,10 @@ name: bot-automerge (reusable)
 #
 # Dependabot's github-actions ecosystem bumps that <sha> pin via PRs, so updates
 # propagate with no per-repo YAML edits. The @rmartz/bot-automerge version this
-# workflow installs is bumped in lockstep with each release (release-please
-# extra-files), so a pinned ref is fully reproducible.
+# workflow installs is NOT written into this file: it is resolved at runtime from
+# the release tag (vX.Y.Z) that points at this workflow's own pinned commit
+# (job.workflow_sha). So the CLI version is a pure function of the Dependabot-
+# managed pin — one bump moves both — and a pinned ref is fully reproducible.
 #
 # bot-automerge posts NO check-run (unlike @rmartz/merge-safety) and carries no
 # fleet check-run contract. It is purely an eligibility ENABLER: the published
@@ -39,10 +41,13 @@ on:
         required: false
         default: ''
       version:
-        description: '@rmartz/bot-automerge version to install (pinned to this release).'
+        description: >-
+          Optional override of the @rmartz/bot-automerge version to install. Leave
+          empty (the default) to install the release this workflow is pinned to —
+          an explicit value is NOT tracked by Dependabot and will go stale.
         type: string
         required: false
-        default: 0.1.3 # x-release-please-version
+        default: ''
       node-version:
         description: Node.js version to run under.
         type: string
@@ -74,12 +79,44 @@ jobs:
           node-version: ${{ inputs.node-version }}
           registry-url: https://npm.pkg.github.com
           scope: '@rmartz'
+      - name: Resolve @rmartz/bot-automerge version
+        id: cli
+        env:
+          OVERRIDE: ${{ inputs.version }}
+          WORKFLOW_REPO: ${{ job.workflow_repository }}
+          WORKFLOW_SHA: ${{ job.workflow_sha }}
+        run: |
+          set -euo pipefail
+          if [ -n "${OVERRIDE}" ]; then
+            version="${OVERRIDE}"
+          else
+            # The released version lives in the git tag, not in this file or in
+            # package.json (semantic-release commits nothing back — see release.yml).
+            # job.workflow_sha is the exact commit the consumer pinned (@<sha>), and
+            # Dependabot only ever pins release-tag commits, so the version is the
+            # release tag on that SHA. Both the current vX.Y.Z tags and the legacy
+            # bot-automerge-vX.Y.Z tags resolve. --paginate output is captured (not
+            # piped to head) so a closed pipe can't trip pipefail.
+            tags="$(gh api --paginate \
+              "repos/${WORKFLOW_REPO}/tags" \
+              --jq ".[] | select(.commit.sha == \"${WORKFLOW_SHA}\") | .name")"
+            version="$(printf '%s\n' "${tags}" \
+              | sed -nE 's/^(bot-automerge-)?v([0-9]+\.[0-9]+\.[0-9]+)$/\2/p' \
+              | sort -V | tail -n 1)"
+            if [ -z "${version}" ]; then
+              echo "::error::No release tag points at pinned commit ${WORKFLOW_SHA} in ${WORKFLOW_REPO}. Pin a release commit (Dependabot does this), or set the 'version:' input." >&2
+              exit 1
+            fi
+          fi
+          echo "Installing @rmartz/bot-automerge@${version}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
       - name: Install ai-bot-automerge
         env:
           # The public @rmartz/bot-automerge package on GitHub Packages is readable
           # with the built-in GITHUB_TOKEN — no consumer PAT required.
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm install -g "@rmartz/bot-automerge@${{ inputs.version }}"
+          CLI_VERSION: ${{ steps.cli.outputs.version }}
+        run: npm install -g "@rmartz/bot-automerge@${CLI_VERSION}"
 
       # A Dependabot PR carries a semver update-type; fetch it and pass it so the
       # CLI enables auto-merge only on patch/minor (majors stay manual). The guard

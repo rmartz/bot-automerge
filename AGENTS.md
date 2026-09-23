@@ -126,12 +126,23 @@ Most are enforced by eslint; the intent:
   conventional subject that reaches `main` — a non-conventional title makes
   semantic-release skip the release.
 - **Releases are automated** via semantic-release: a push to `main` analyzes the
-  Conventional-Commit history since the last `bot-automerge-v*` tag and, when a
-  release is warranted, publishes `@rmartz/bot-automerge` to GitHub Packages
-  (public) and creates the git tag + GitHub Release — no release PR, no
-  commit-back. The built-in `GITHUB_TOKEN` suffices (`packages: write`), and
-  `tagFormat` is pinned to `bot-automerge-v${version}` in `.releaserc.json` for
-  continuity with the prior release-please tags.
+  Conventional-Commit history since the last `vX.Y.Z` tag and, when a release is
+  warranted, publishes `@rmartz/bot-automerge` to GitHub Packages (public) and
+  creates the git tag + GitHub Release — no release PR, no commit-back. The
+  built-in `GITHUB_TOKEN` suffices (`packages: write`), and nothing needs to
+  bypass the `main` ruleset.
+- **The git tag is the only version of record.** `package.json` stays
+  `0.0.0-development`, and the reusable workflow's `version` input defaults to
+  empty: at runtime the workflow resolves the CLI version from the release tag
+  pointing at its own pinned commit (`job.workflow_sha`). So a consumer's
+  Dependabot-bumped `@<sha> # vX.Y.Z` pin moves the workflow **and** the CLI
+  together. **Never hardcode a version into a workflow file** (the old
+  `# x-release-please-version` default went stale once release-please was
+  retired) — every pinned version must be one Dependabot can bump.
+- **Tags are plain `v${version}`** (`.releaserc.json`), the form Dependabot's
+  `github-actions` ecosystem resolves. The legacy `bot-automerge-vX.Y.Z` tags
+  (≤ 0.2.0) are kept so existing pins still resolve, and each has a `vX.Y.Z` alias
+  on the same commit so semantic-release continues from the latest one.
 
 ## Agent directive files
 
