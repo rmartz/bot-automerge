@@ -20,9 +20,13 @@
  *      caller-supplied update-type is patch or minor; major is held for manual
  *      review; a missing/unrecognized update-type is fail-safe not-eligible (we
  *      never enable on an unconfirmed update-type).
- *   4. Head branch `release-please--…` OR label `autorelease: pending` → the
- *      release-please path: always eligible (the release PR merges once its
- *      required checks pass; it has no update-type of its own).
+ *   4. Head branch `release-please--…` → the release-please path: always
+ *      eligible (the release PR merges once its required checks pass; it has no
+ *      update-type of its own). The `autorelease: pending` label is NOT a
+ *      signal: applying a label needs only triage permission, which can't push
+ *      or merge, so trusting it would let a labeller arm auto-merge on any
+ *      same-repo PR (GHSA-4f7f-7fcp-gcm6). Pushing a `release-please--` branch
+ *      already requires write access.
  *   5. Anything else (an unknown bot or a human author) → not eligible.
  *
  * FAIL-SAFE: every uncertain or unrecognized case resolves to `eligible: false`,
@@ -31,7 +35,6 @@
  */
 import {
   RELEASE_PLEASE_BRANCH_PREFIX,
-  RELEASE_PLEASE_PENDING_LABEL,
   isDependabotAuthor,
   isDependabotUpdateType,
   isEligibleDependabotUpdateType,
@@ -67,16 +70,11 @@ export function isEvaluablePrState(state: string): boolean {
 /**
  * Detect which trusted-bot path a PR takes, or `null` when it is neither. The
  * Dependabot check (by author) is tried first; release-please is detected by its
- * head-branch prefix or its pending label.
+ * head-branch prefix only — never by a label (GHSA-4f7f-7fcp-gcm6).
  */
 export function detectBotPrType(view: BotPrView): BotPrType | null {
   if (isDependabotAuthor(view.author)) return 'dependabot';
-  if (
-    view.headRefName.startsWith(RELEASE_PLEASE_BRANCH_PREFIX) ||
-    view.labels.includes(RELEASE_PLEASE_PENDING_LABEL)
-  ) {
-    return 'release-please';
-  }
+  if (view.headRefName.startsWith(RELEASE_PLEASE_BRANCH_PREFIX)) return 'release-please';
   return null;
 }
 
