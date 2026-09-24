@@ -134,9 +134,11 @@ Most are enforced by eslint; the intent:
   semantic-release skip the release.
 - **Releases are automated** via semantic-release: a push to `main` analyzes the
   Conventional-Commit history since the last `bot-automerge-v*` tag and, when a
-  release is warranted, publishes `@rmartz/bot-automerge` to GitHub Packages
-  (public) and creates the git tag + GitHub Release — no release PR, no
-  commit-back. The built-in `GITHUB_TOKEN` suffices (`packages: write`), and
+  release is warranted, publishes `@rmartz/bot-automerge` to npmjs (public) and
+  creates the git tag + GitHub Release — no release PR, no commit-back. npm auth
+  is OIDC trusted publishing tied to the `release.yml` filename (no `NPM_TOKEN`;
+  renaming that workflow breaks publishing until the trusted publisher on npmjs is
+  updated), the built-in `GITHUB_TOKEN` covers tags and releases, and
   `tagFormat` is pinned to `bot-automerge-v${version}` in `.releaserc.json` for
   continuity with the prior release-please tags.
 
