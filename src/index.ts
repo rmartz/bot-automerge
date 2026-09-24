@@ -66,12 +66,16 @@ export function isDependabotAuthor(login: string): boolean {
 
 /**
  * The head-branch prefix release-please gives its release PR (e.g.
- * `release-please--branches--main`). Either this prefix OR the pending label
- * below marks a PR as a release-please release PR.
+ * `release-please--branches--main`). This prefix alone marks a PR as a
+ * release-please release PR.
  */
 export const RELEASE_PLEASE_BRANCH_PREFIX = 'release-please--';
 
-/** The label release-please applies to its open release PR. */
+/**
+ * The label release-please applies to its open release PR. Informational only:
+ * it is NOT an eligibility signal, because anyone with triage permission can
+ * apply it to any PR (GHSA-4f7f-7fcp-gcm6).
+ */
 export const RELEASE_PLEASE_PENDING_LABEL = 'autorelease: pending';
 
 /**
