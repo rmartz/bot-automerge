@@ -138,7 +138,8 @@ Most are enforced by eslint; the intent:
   creates the git tag + GitHub Release — no release PR, no commit-back. npm auth
   is OIDC trusted publishing tied to the `release.yml` filename (no `NPM_TOKEN`;
   renaming that workflow breaks publishing until the trusted publisher on npmjs is
-  updated), the built-in `GITHUB_TOKEN` covers tags and releases, and
+  updated; `npm publish` also needs npm >= 11.5.1, so `release.yml` upgrades the
+  runner's npm before releasing), the built-in `GITHUB_TOKEN` covers tags and releases, and
   `tagFormat` is pinned to `bot-automerge-v${version}` in `.releaserc.json` for
   continuity with the prior release-please tags.
 
