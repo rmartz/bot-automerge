@@ -9,7 +9,7 @@
  *
  * The classification + enablement implementation (and the `ai-bot-automerge` bin)
  * lives alongside it; this module is intentionally the narrow, frozen surface the
- * reusable workflow and consumers depend on. Extracted per rmartz/ai-tools#264.
+ * bot-automerge-action and consumers depend on. Extracted per rmartz/ai-tools#264.
  */
 
 /**
@@ -29,7 +29,7 @@ export function isBotAutomergeCommand(value: string | undefined): value is BotAu
 // ---------------------------------------------------------------------------
 // Bot-eligibility classification contract (issue #264)
 //
-// The stable, frozen surface the reusable workflow and consumers build against.
+// The stable, frozen surface bot-automerge-action and consumers build against.
 // These constants are the detection signals; a package test pins them the way
 // merge-safety pins its check-run name, so a silent edit can't drift the fleet.
 // The classification *logic* over them lives in `bot-automerge.ts`.
@@ -66,12 +66,16 @@ export function isDependabotAuthor(login: string): boolean {
 
 /**
  * The head-branch prefix release-please gives its release PR (e.g.
- * `release-please--branches--main`). Either this prefix OR the pending label
- * below marks a PR as a release-please release PR.
+ * `release-please--branches--main`). This prefix alone marks a PR as a
+ * release-please release PR.
  */
 export const RELEASE_PLEASE_BRANCH_PREFIX = 'release-please--';
 
-/** The label release-please applies to its open release PR. */
+/**
+ * The label release-please applies to its open release PR. Informational only:
+ * it is NOT an eligibility signal, because anyone with triage permission can
+ * apply it to any PR (GHSA-4f7f-7fcp-gcm6).
+ */
 export const RELEASE_PLEASE_PENDING_LABEL = 'autorelease: pending';
 
 /**
@@ -140,3 +144,21 @@ export interface BotAutomergeVerdict {
   prType: BotPrType | null;
   updateType: DependabotUpdateType | null;
 }
+
+/**
+ * The label bot-automerge applies to a PR at the moment it turns on native
+ * auto-merge, so external processes (triage bots, dashboards, PR coordinators)
+ * can see the PR is already owned by bot-automerge and need not route it for
+ * manual merge handling.
+ *
+ * This is additive and human-visible; unlike `@rmartz/merge-safety`'s check-run
+ * it carries NO required-status contract — bot-automerge still posts no check-run.
+ * The application is best-effort: it uses the caller's existing
+ * `pull-requests: write` scope, and consuming repos seed the label through their
+ * label roster (`ai-ensure-labels` / `labels.yml`).
+ *
+ * PUBLIC CONTRACT: external processes key on this string verbatim, so a package
+ * test pins it the way merge-safety pins its check-run name — a silent edit here
+ * would break every consumer keying off the label.
+ */
+export const AUTOMERGE_HANDLED_LABEL = 'auto-merge enabled';

@@ -1,121 +1,83 @@
 ---
 type: Reference
-title: Setting up bot-automerge in a consuming repo
-description: How to add the thin bot-automerge caller workflow to a repo, why it uses pull_request_target and grants write scopes, the required-checks prerequisite that keeps auto-merge safe, the RELEASE_PLEASE_PAT a release-please consumer needs for continuous delivery, and how the SHA pin stays current via Dependabot.
+title: Consuming bot-automerge
+description: Consumers use rmartz/bot-automerge-action, not a workflow in this repo; how a CLI release reaches them through that action's Dependabot-bumped pin, how to migrate a caller off the retired in-repo reusable workflow, and the `auto-merge enabled` label to seed.
 tags: [consumer, setup, auto-merge]
 ---
 
-# Setting up bot-automerge in a consuming repo
+# Consuming bot-automerge
 
-This is the consumer-facing guide: how a repository adopts `@rmartz/bot-automerge`.
-Unlike a read-only hygiene check, bot-automerge's caller is **not** trigger-free —
-it carries the event trigger, grants write scopes, and passes secrets through —
-because a reusable workflow cannot declare its own `on:` triggers and runs with
-the _intersection_ of the caller-granted and workflow-declared permissions.
+This repo publishes the `@rmartz/bot-automerge` package (the `ai-bot-automerge`
+CLI). It does **not** ship the workflow consumers call. Consumers use
+[`rmartz/bot-automerge-action`](https://github.com/rmartz/bot-automerge-action),
+and its
+[consumer guide](https://github.com/rmartz/bot-automerge-action/blob/main/docs/consuming.md)
+is the setup reference: the caller workflow, why it uses `pull_request_target`
+and grants write scopes, the `RELEASE_PLEASE_PAT` for release-please CD, and the
+prerequisite below.
 
 > **‼️ PREREQUISITE — require `merge-safety` + your CI checks on the default branch
-> BEFORE adopting this caller.** bot-automerge only turns on GitHub-native
-> auto-merge; it does **not** decide whether a PR is _safe_ to merge. And
-> `gh pr merge --auto` merges a PR **immediately** if the repo has **no required
-> status checks** — auto-merge with nothing to wait for is just a merge. So a repo
-> MUST have required status checks configured on its default branch before it
-> enables bot-automerge, or an eligible bot PR will merge the instant the caller
-> runs, unreviewed and unverified.
->
-> The intended safety verdict is [`@rmartz/merge-safety`](https://github.com/rmartz/merge-safety):
-> adopt it (its `merge-safety` check-run **plus** your normal CI checks — build,
-> lint, test) as **required status checks** on the default branch first. The two
-> are complementary: **merge-safety is the safety VERDICT, bot-automerge is the
-> eligibility ENABLER.** Enable bot-automerge only once those required checks are
-> in place.
+> BEFORE adopting bot-automerge.** It only turns on GitHub-native auto-merge; it
+> does **not** decide whether a PR is _safe_ to merge. `gh pr merge --auto` merges
+> a PR **immediately** if the repo has no required status checks, so an eligible
+> bot PR would merge the instant the caller runs. Require
+> [`merge-safety`](https://github.com/rmartz/merge-safety) and your CI first —
+> **merge-safety is the safety VERDICT, bot-automerge is the eligibility ENABLER.**
 
-## 1. Add the caller workflow
+## How a CLI release reaches consumers
 
-A consuming repo pins one thin caller workflow:
+Every version pin in the chain is one Dependabot bumps:
 
-```yaml
-# .github/workflows/bot-automerge.yml
-name: bot-automerge
-on:
-  pull_request_target:
-    types: [opened, reopened, synchronize, labeled]
-permissions:
-  contents: write # enable GitHub-native auto-merge on the PR
-  pull-requests: write # read PR metadata + turn on auto-merge
-  packages: read # install the CLI from GitHub Packages
-jobs:
-  bot-automerge:
-    uses: rmartz/bot-automerge/.github/workflows/bot-automerge.yml@<sha> # vX.Y.Z
-    with:
-      pr: ${{ github.event.pull_request.number }}
-    secrets: inherit
+1. A release here publishes `@rmartz/bot-automerge` to npmjs.
+2. `rmartz/bot-automerge-action` pins that version in its own `package.json`.
+   Dependabot's `npm` ecosystem bumps it, and the merged bump cuts an action
+   release.
+3. Consumers pin the action by SHA with a `# vX.Y.Z` comment. Dependabot's
+   `github-actions` ecosystem bumps that pin to the new action release.
+
+So a given action pin always installs one exact CLI version, and nothing in a
+consumer's repo names the CLI version directly. Each step waits for Dependabot's
+schedule, so a new CLI release takes a few days to reach consumers. That delay is
+expected.
+
+## Migrating off the retired reusable workflow
+
+Until #18 Phase 2, this repo shipped a reusable workflow that consumers called as
+`rmartz/bot-automerge/.github/workflows/bot-automerge.yml@<sha>`. It is gone
+from `main`, but **an existing SHA-pinned caller does not break**: GitHub loads a
+reusable workflow from the pinned commit, and release tags keep those commits
+reachable. That is the problem. Such a caller stays frozen on the CLI version its
+pinned commit hardcoded (0.1.x), never receives a later fix, and gives no signal
+that it is stale. A caller pinned to a commit before #32 also lacks the fork-PR
+guard for GHSA-39fm-72q5-676g, so migrate those first.
+
+Migrate every such caller explicitly. The smallest change is the action's
+reusable-workflow shape: point `uses:` at
+`rmartz/bot-automerge-action/.github/workflows/bot-automerge-reusable.yml@<sha> # vX.Y.Z`,
+keep `secrets: inherit`, and drop the `with: pr:` input and any `concurrency:`
+group. See the action guide's
+[migration section](https://github.com/rmartz/bot-automerge-action/blob/main/docs/consuming.md#migrating-from-rmartzbot-automerges-reusable-workflow).
+
+## The `auto-merge enabled` label
+
+When the CLI arms auto-merge on a PR, it also applies an **`auto-merge enabled`**
+label, so your other automation (triage, dashboards, a PR coordinator) can tell
+the PR is already owned by bot-automerge and skip it for manual merge handling.
+It uses the `pull-requests: write` scope the caller already grants — no extra
+permission and no check-run.
+
+Labelling is **best-effort**: if the label does not exist in your repo, the `gh`
+call soft-fails and bot-automerge logs it and moves on — the auto-merge is already
+armed, so a missing label never fails the run. To make the signal reliable, **seed
+the label in your repo** so it is present before the first eligible PR:
+
+```bash
+ai-ensure-labels   # seeds the standard roster, including `auto-merge enabled`
 ```
 
-Why each piece is there:
+or create it directly:
 
-- **`pull_request_target`, not `pull_request`.** Dependabot PRs (and other PRs
-  from forks) run the `pull_request` event with a **read-only** `GITHUB_TOKEN`,
-  which cannot enable auto-merge. `pull_request_target` runs in the **base
-  repository's context** with the write token this needs. The caller carries the
-  trigger because a reusable workflow can't declare `on:` itself; it passes the
-  event context in, and the Dependabot-vs-other branch and the `fetch-metadata`
-  step live inside the
-  [reusable workflow](../.github/workflows/bot-automerge.yml), so the caller stays
-  thin.
-- **Write scopes _and_ `packages: read`, not read-only.** Effective permissions
-  are the intersection of caller-granted and workflow-declared, and a called
-  reusable workflow can never obtain a permission its caller does not grant. So
-  the caller must grant the `contents: write` / `pull-requests: write` set that
-  enabling native auto-merge requires **and** the `packages: read` the reusable
-  workflow declares to install the CLI from GitHub Packages. Omitting
-  `packages: read` fails the run at **startup validation** (`startup_failure`) —
-  no job runs and no work happens at all — so all three scopes are mandatory.
-- **`labeled` is included** so that relabeling a held PR (for example, once a
-  human clears it) re-triggers the eligibility check.
-- **`secrets: inherit`** — the built-in `GITHUB_TOKEN` (via `packages: read` in the
-  reusable workflow) covers the public CLI install, and it also passes through
-  `RELEASE_PLEASE_PAT` for the release-please continuous-delivery path (see §3).
-
-## 2. Keep the pin current
-
-The `@<sha>` pin is bumped by Dependabot's `github-actions` ecosystem, the same
-channel every reusable-workflow consumer uses:
-
-```yaml
-# .github/dependabot.yml
-version: 2
-updates:
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
+```bash
+gh label create "auto-merge enabled" --color 1F883D \
+  --description "bot-automerge has enabled native auto-merge on this PR."
 ```
-
-**Use a plain `# vX.Y.Z` version comment** on the pin — e.g.
-`…/bot-automerge.yml@<sha> # v0.1.0` — **not** the component-scoped tag name. That
-is the form Dependabot's `github-actions` ecosystem tracks to re-bump the SHA +
-comment together, and the form that consumer pin-linters requiring a full
-`vMAJOR.MINOR.PATCH` comment accept. This is exactly how this repo pins its own
-`@rmartz/repo-hygiene` caller — `hygiene.yml@<sha> # v1.0.1` — a pin Dependabot
-keeps current.
-
-**Auth:** the published `@rmartz/bot-automerge` package is **public** on GitHub
-Packages, readable with the built-in `GITHUB_TOKEN` — the `packages: read`
-permission in the reusable workflow is all the install needs, no per-repo PAT.
-
-## 3. Release-please PRs and continuous delivery (a PAT is required)
-
-For **Dependabot** PRs the built-in `GITHUB_TOKEN` is enough. For **release-please
-release PRs**, `GITHUB_TOKEN` is **not** enough if you want continuous delivery: a
-release PR merged under `GITHUB_TOKEN` is attributed to `github-actions[bot]`, and
-**`GITHUB_TOKEN`-attributed pushes do not trigger workflows**, so your
-`release.yml` (`on: push`) never re-fires — the version bump lands but nothing is
-tagged or published.
-
-To fix this, provide a PAT as a repo secret named **`RELEASE_PLEASE_PAT`** (the
-same PAT release-please itself needs — `repo` + `workflow` scope). On the
-release-please path the reusable workflow uses `secrets.RELEASE_PLEASE_PAT` (via
-`secrets: inherit`) as the merge actor, so the merge re-triggers `release.yml` and
-CD completes. Without the secret it falls back to `GITHUB_TOKEN` — auto-merge still
-works, but release-PR CD will not re-trigger. Repos that do not use release-please
-(or do not auto-merge release PRs) need no PAT.

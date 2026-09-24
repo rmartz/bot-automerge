@@ -15,8 +15,8 @@ which computes the pre-auto-merge **safety verdict**. Where merge-safety answers
 "is it safe to merge this PR?", bot-automerge answers "is this a bot PR we trust
 enough to enable auto-merge on in the first place?".
 
-It ships as one CLI, `ai-bot-automerge`, with a single operation that the
-[reusable workflow](consuming.md) dispatches:
+It ships as one CLI, `ai-bot-automerge`, with a single operation that
+[`rmartz/bot-automerge-action`](consuming.md) dispatches:
 
 ## `enable` — one bot PR
 
@@ -37,10 +37,21 @@ metadata and, when the PR qualifies, flips on native auto-merge. The actual
 merge still waits on the repo's own required status checks (including
 merge-safety's, where that is adopted).
 
+## The `auto-merge enabled` label
+
+When bot-automerge arms native auto-merge on a PR, it also applies an
+**`auto-merge enabled`** label to it, so external processes (triage bots,
+dashboards, PR coordinators) can see the PR is already owned by bot-automerge and
+skip it for manual merge handling. It is a plain, human-visible issue label — not
+a required status — so it is **not** the check-run bot-automerge deliberately
+omits, and it never gates a merge. Labelling is best-effort; consumers seed the
+label through their label roster (`ai-ensure-labels` / `labels.yml`). See the
+[eligibility contract](bot-automerge-contract.md#what-enable-does--and-does-not-do).
+
 ## How the pieces fit
 
 - **[The eligibility contract](bot-automerge-contract.md)** — the bot-detection +
   eligibility classification rules.
-- **[Setting up bot-automerge in a consuming repo](consuming.md)** — the caller
-  workflow, its `pull_request_target` trigger, and the required-checks
-  prerequisite that keeps auto-merge safe.
+- **[Consuming bot-automerge](consuming.md)** — consumers use
+  `rmartz/bot-automerge-action`; how the CLI version reaches them and how to
+  migrate off the retired reusable workflow.

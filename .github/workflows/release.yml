@@ -2,12 +2,17 @@ name: Release
 
 # Automated releases via semantic-release. On every push to main it analyzes the
 # Conventional-Commit history since the last `bot-automerge-v*` tag and, when a
-# release is warranted, builds and publishes @rmartz/bot-automerge to GitHub
-# Packages (public), then creates the git tag + GitHub Release. It commits NOTHING
-# back to the repo (no @semantic-release/git), so the built-in GITHUB_TOKEN
-# suffices (it has packages:write) — no PAT. `tagFormat` is pinned to
-# `bot-automerge-v${version}` in .releaserc.json for continuity with the prior
-# release-please tags, so semantic-release resumes from bot-automerge-v0.1.1.
+# release is warranted, builds and publishes @rmartz/bot-automerge to npmjs
+# (public), then creates the git tag + GitHub Release. It commits NOTHING back to
+# the repo (no @semantic-release/git), so the built-in GITHUB_TOKEN suffices — no
+# PAT. `tagFormat` is pinned to `bot-automerge-v${version}` in .releaserc.json for
+# continuity with the prior release-please tags, so semantic-release resumes from
+# bot-automerge-v0.1.1.
+#
+# npm auth is OIDC trusted publishing: npmjs trusts THIS workflow file
+# (`release.yml`) in rmartz/bot-automerge, so there is no NPM_TOKEN secret.
+# Renaming this file breaks publishing until the trusted publisher on npmjs is
+# updated to match. Provenance attestations are generated automatically.
 
 on:
   push:
@@ -18,7 +23,7 @@ concurrency: release
 
 permissions:
   contents: write # create tags + GitHub Releases
-  packages: write # publish to GitHub Packages
+  id-token: write # npm trusted publishing (OIDC) + provenance
   issues: write # semantic-release/github comments on released issues
   pull-requests: write # semantic-release/github comments on released PRs
 
@@ -37,15 +42,9 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          registry-url: https://npm.pkg.github.com
-          scope: '@rmartz'
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
       - name: Release
         run: pnpm exec semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # @semantic-release/npm publishes to the publishConfig registry (GitHub
-          # Packages) using this token; GITHUB_TOKEN has packages:write.
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}

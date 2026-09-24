@@ -2,17 +2,18 @@ name: automerge
 
 # bot-automerge dogfoods its own eligibility enabler: this caller turns on
 # GitHub-native auto-merge for THIS repo's trustworthy bot PRs — Dependabot
-# patch/minor bumps and release-please release PRs. It pins the PUBLISHED reusable
-# workflow by SHA (Dependabot-bumped), not a local `./` ref, so we exercise the
-# exact path consumers do. The file is `automerge.yml` because `bot-automerge.yml`
-# is the reusable definition this repo provides.
+# patch/minor bumps and release-please release PRs. It is an ordinary consumer of
+# rmartz/bot-automerge-action, the distribution surface for this repo's CLI
+# (rmartz/bot-automerge#18), pinned by SHA and bumped by Dependabot, so we exercise
+# the exact path every other consumer does.
 #
-# `secrets: inherit` passes RELEASE_PLEASE_PAT through, so the release-please path
-# merges via a real-actor PAT and re-triggers release.yml for continuous delivery
-# (see docs/consuming.md §3). Auto-merge still waits on this repo's ruleset
-# required checks (merge-safety + CI), so nothing merges until a PR is both
-# eligible AND verified. Human-authored PRs are classified as not-eligible and
-# left untouched.
+# This is the action's reusable-workflow shape ("Shape A" in its
+# docs/consuming.md): the skip guard for PRs that can never qualify is built in,
+# and its `uses: $/` step resolves the action at the same pinned commit, so the one
+# pin below fixes both the workflow and the CLI version it installs. `secrets:
+# inherit` passes RELEASE_PLEASE_PAT through for release-please consumers' CD.
+# Auto-merge still waits on this repo's ruleset required checks (merge-safety +
+# CI), so nothing merges until a PR is both eligible AND verified.
 
 on:
   pull_request_target:
@@ -25,7 +26,5 @@ permissions:
 
 jobs:
   bot-automerge:
-    uses: rmartz/bot-automerge/.github/workflows/bot-automerge.yml@139f4ce609c2dfe65f1e090c00f17204bfce1b3e # v0.1.1
-    with:
-      pr: ${{ github.event.pull_request.number }}
+    uses: rmartz/bot-automerge-action/.github/workflows/bot-automerge-reusable.yml@a46eafc1396993ffc04918f452b3d1c0e3c80f4f # v1.1.1
     secrets: inherit

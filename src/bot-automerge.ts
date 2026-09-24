@@ -11,15 +11,23 @@
  *
  * The rules (see docs/bot-automerge-contract.md):
  *   1. A non-OPEN PR (closed/merged) is a no-op skip — never eligible.
- *   2. Author is Dependabot (`dependabot[bot]` via the API, or `app/dependabot`
+ *   2. A cross-repository (fork) PR is never eligible. A fork controls its own
+ *      branch names and can't be told apart from a release-please PR by its
+ *      branch or label, while genuine Dependabot and release-please branches
+ *      always live in the base repository (GHSA-39fm-72q5-676g).
+ *   3. Author is Dependabot (`dependabot[bot]` via the API, or `app/dependabot`
  *      via the `gh` CLI) → the Dependabot path: eligible iff the
  *      caller-supplied update-type is patch or minor; major is held for manual
  *      review; a missing/unrecognized update-type is fail-safe not-eligible (we
  *      never enable on an unconfirmed update-type).
- *   3. Head branch `release-please--…` OR label `autorelease: pending` → the
- *      release-please path: always eligible (the release PR merges once its
- *      required checks pass; it has no update-type of its own).
- *   4. Anything else (an unknown bot or a human author) → not eligible.
+ *   4. Head branch `release-please--…` → the release-please path: always
+ *      eligible (the release PR merges once its required checks pass; it has no
+ *      update-type of its own). The `autorelease: pending` label is NOT a
+ *      signal: applying a label needs only triage permission, which can't push
+ *      or merge, so trusting it would let a labeller arm auto-merge on any
+ *      same-repo PR (GHSA-4f7f-7fcp-gcm6). Pushing a `release-please--` branch
+ *      already requires write access.
+ *   5. Anything else (an unknown bot or a human author) → not eligible.
  *
  * FAIL-SAFE: every uncertain or unrecognized case resolves to `eligible: false`,
  * so a caller that trusts the verdict never enables auto-merge on a PR it could
@@ -27,7 +35,6 @@
  */
 import {
   RELEASE_PLEASE_BRANCH_PREFIX,
-  RELEASE_PLEASE_PENDING_LABEL,
   isDependabotAuthor,
   isDependabotUpdateType,
   isEligibleDependabotUpdateType,
@@ -40,11 +47,13 @@ import {
  * The PR facts classification reads, as gathered from `gh pr view`. `author` is
  * the PR author's login as `gh` reports it — bot logins take `app/<slug>` form
  * (e.g. `app/dependabot`), not the API's `<slug>[bot]`; `state` is `OPEN` /
- * `CLOSED` / `MERGED`.
+ * `CLOSED` / `MERGED`. `isCrossRepository` is true when the head branch lives
+ * outside the base repository (a fork, or a head repository that was deleted).
  */
 export interface BotPrView {
   author: string;
   headRefName: string;
+  isCrossRepository: boolean;
   labels: readonly string[];
   state: string;
 }
@@ -61,16 +70,11 @@ export function isEvaluablePrState(state: string): boolean {
 /**
  * Detect which trusted-bot path a PR takes, or `null` when it is neither. The
  * Dependabot check (by author) is tried first; release-please is detected by its
- * head-branch prefix or its pending label.
+ * head-branch prefix only — never by a label (GHSA-4f7f-7fcp-gcm6).
  */
 export function detectBotPrType(view: BotPrView): BotPrType | null {
   if (isDependabotAuthor(view.author)) return 'dependabot';
-  if (
-    view.headRefName.startsWith(RELEASE_PLEASE_BRANCH_PREFIX) ||
-    view.labels.includes(RELEASE_PLEASE_PENDING_LABEL)
-  ) {
-    return 'release-please';
-  }
+  if (view.headRefName.startsWith(RELEASE_PLEASE_BRANCH_PREFIX)) return 'release-please';
   return null;
 }
 
@@ -100,6 +104,12 @@ export function classifyBotPr(view: BotPrView, updateType?: string): BotAutomerg
   // A settled PR earns no action regardless of who authored it.
   if (!isEvaluablePrState(view.state)) {
     return verdict(false, `PR is ${view.state.toLowerCase()} — no auto-merge action`, prType, null);
+  }
+
+  // A fork picks its own branch name, so it can pose as a release-please PR. No
+  // fork PR is trusted, whichever bot path it would otherwise match.
+  if (view.isCrossRepository) {
+    return verdict(false, 'PR is from a fork (cross-repository) — never eligible', null, null);
   }
 
   if (prType === null) {

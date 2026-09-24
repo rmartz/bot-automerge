@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  AUTOMERGE_HANDLED_LABEL,
   BOT_AUTOMERGE_COMMANDS,
   isBotAutomergeCommand,
   DEPENDABOT_AUTHOR,
@@ -60,6 +61,10 @@ describe('classification contract constants', () => {
 
   it('pins the recognized bot PR types', () => {
     expect(BOT_PR_TYPES).toEqual(['dependabot', 'release-please']);
+  });
+
+  it('pins the auto-merge handled label (external processes key on it verbatim)', () => {
+    expect(AUTOMERGE_HANDLED_LABEL).toBe('auto-merge enabled');
   });
 });
 
