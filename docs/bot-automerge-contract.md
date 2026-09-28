@@ -125,3 +125,26 @@ label is logged, not fatal. Consumers seed the label through their label roster
 - `2` — usage error (bad command, missing `--pr`, unresolvable repo).
 - `1` — **only** an ungatherable/`gh` failure (the PR could not be read, or
   `gh pr merge` failed). On any failure, auto-merge is never enabled.
+
+### Failure messages
+
+On exit `1` the message names the cause, classified from `gh`'s stderr, and
+ends with the evidence: `gh`'s exit code and the first line of its stderr. For
+example:
+
+```text
+#64: could not read PR #64 — token rejected (from GH_TOKEN) — it is expired, revoked, or SSO-deauthorized; rotate it, or unset it to fall back to the workflow token (gh exited 1: HTTP 401: Bad credentials (https://api.github.com/graphql)) — not enabling auto-merge
+```
+
+| Cause               | Recognized by                                                | Fix                              |
+| ------------------- | ------------------------------------------------------------ | -------------------------------- |
+| rate limited        | `rate limit`, HTTP 429, abuse detection                      | wait for the reset, re-run       |
+| token rejected      | HTTP 401, `Bad credentials`, SAML/SSO enforcement            | rotate the token, or unset it    |
+| token lacks access  | `Resource not accessible`, any other HTTP 403                | grant `contents` + `pull-requests` write |
+| PR not found        | `Could not resolve to a PullRequest`, HTTP 404               | fix the PR number the caller passed |
+| repo not found      | `Could not resolve to a Repository`                          | check `--repo` and the token's repo access |
+| anything else       | —                                                            | read the echoed stderr line      |
+
+The token's **source** is the variable name `gh` authenticated with (`GH_TOKEN`,
+then `GITHUB_TOKEN`, then its stored login), never its value. Under `--json` the
+same text is the error verdict's `reason`.
