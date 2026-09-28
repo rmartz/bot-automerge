@@ -14,7 +14,8 @@
 //   2 — usage error (bad command, missing `--pr`, unresolvable repo).
 //   1 — ONLY an ungatherable/`gh` failure (PR unreadable, `gh pr merge` failed).
 //       On any failure we never enable auto-merge.
-import { ghCall, resolveRepoTarget } from '../lib/github.js';
+import { ghCallDetailed, resolveRepoTarget } from '../lib/github.js';
+import { describeGhFailure } from '../lib/gh-failure.js';
 import { markPrHandled } from '../lib/automerge-label.js';
 import {
   AUTOMERGE_HANDLED_LABEL,
@@ -64,13 +65,18 @@ function parse(argv: string[]): Args {
   return args;
 }
 
-async function ghJson<T>(argv: string[], cwd?: string): Promise<T | null> {
-  const out = await ghCall({ argv }, null, { cwd });
-  if (out === null) return null;
+/** Parsed JSON from one `gh` call, or a description of why there is none. */
+type GhJsonResult<T> = { ok: true; value: T } | { ok: false; why: string };
+
+async function ghJson<T>(argv: string[], cwd?: string): Promise<GhJsonResult<T>> {
+  const { stdout, failure } = await ghCallDetailed({ argv }, null, { cwd });
+  if (stdout === null) {
+    return { ok: false, why: failure ? describeGhFailure(failure) : 'gh failed' };
+  }
   try {
-    return JSON.parse(out) as T;
+    return { ok: true, value: JSON.parse(stdout) as T };
   } catch {
-    return null;
+    return { ok: false, why: 'gh returned output that is not valid JSON' };
   }
 }
 
@@ -85,8 +91,8 @@ interface PrView {
   state: string;
 }
 
-/** Read the classification-relevant fields of one PR, or `null` on failure. */
-async function fetchPrView(repo: string, pr: number, cwd?: string): Promise<PrView | null> {
+/** Read the classification-relevant fields of one PR, or why they couldn't be read. */
+async function fetchPrView(repo: string, pr: number, cwd?: string): Promise<GhJsonResult<PrView>> {
   return ghJson<PrView>(
     [
       'gh',
@@ -107,26 +113,31 @@ function emitVerdictJson(verdict: BotAutomergeVerdict, isError: boolean): void {
   if (isError) process.exitCode = 1;
 }
 
-/** Turn on GitHub-native auto-merge (squash). Returns false on a `gh` failure. */
-async function enableAutoMerge(repo: string, pr: number, cwd?: string): Promise<boolean> {
-  const out = await ghCall(
+/**
+ * Turn on GitHub-native auto-merge (squash). Returns `null` on success, or a
+ * description of the `gh` failure.
+ */
+async function enableAutoMerge(repo: string, pr: number, cwd?: string): Promise<string | null> {
+  const { failure } = await ghCallDetailed(
     { argv: ['gh', 'pr', 'merge', '--auto', '--squash', String(pr), '--repo', repo] },
     null,
     { cwd },
   );
-  return out !== null;
+  return failure ? describeGhFailure(failure) : null;
 }
 
 async function runEnable(repo: string, pr: number, args: Args): Promise<void> {
-  const view = await fetchPrView(repo, pr, args.cwd);
-  if (!view) {
-    // A PR we can't even read is ungatherable — fail safe, never enable.
-    const msg = `could not read PR #${pr}`;
+  const fetched = await fetchPrView(repo, pr, args.cwd);
+  if (!fetched.ok) {
+    // A PR we can't even read is ungatherable — fail safe, never enable. Say why:
+    // a rejected token, a rate limit, and a missing PR need different fixes (#30).
+    const msg = `could not read PR #${pr} — ${fetched.why}`;
     if (args.json) return emitVerdictJson(errorBotAutomergeVerdict(msg), true);
     console.error(`#${pr}: ${msg} — not enabling auto-merge`);
     process.exitCode = 1;
     return;
   }
+  const view = fetched.value;
 
   const prView: BotPrView = {
     author: view.author?.login ?? '',
@@ -153,9 +164,11 @@ async function runEnable(repo: string, pr: number, args: Args): Promise<void> {
     return;
   }
 
-  const enabled = await enableAutoMerge(repo, pr, args.cwd);
-  if (!enabled) {
-    console.error(`#${pr}: eligible (${verdict.reason}) but failed to enable auto-merge`);
+  const mergeFailure = await enableAutoMerge(repo, pr, args.cwd);
+  if (mergeFailure !== null) {
+    console.error(
+      `#${pr}: eligible (${verdict.reason}) but failed to enable auto-merge — ${mergeFailure}`,
+    );
     process.exitCode = 1;
     return;
   }
