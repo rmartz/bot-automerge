@@ -1,18 +1,31 @@
 name: Release
 
-# Automated releases via semantic-release. On every push to main it analyzes the
+# Automated releases via semantic-release, through the fleet's shared workflow
+# (rmartz/semantic-release-ci). On every push to main it analyzes the
 # Conventional-Commit history since the last `bot-automerge-v*` tag and, when a
 # release is warranted, builds and publishes @rmartz/bot-automerge to npmjs
 # (public), then creates the git tag + GitHub Release. It commits NOTHING back to
 # the repo (no @semantic-release/git), so the built-in GITHUB_TOKEN suffices — no
-# PAT. `tagFormat` is pinned to `bot-automerge-v${version}` in .releaserc.json for
-# continuity with the prior release-please tags, so semantic-release resumes from
-# bot-automerge-v0.1.1.
+# PAT. The release toolchain (semantic-release, its plugins incl.
+# @semantic-release/exec, and the changelog preset) lives in semantic-release-ci,
+# where a toolchain bump is tested before it reaches this pin; the options stay
+# here in .releaserc.json (`tagFormat` is pinned to `bot-automerge-v${version}`
+# there for continuity with the prior release-please tags).
 #
 # npm auth is OIDC trusted publishing: npmjs trusts THIS workflow file
 # (`release.yml`) in rmartz/bot-automerge, so there is no NPM_TOKEN secret.
 # Renaming this file breaks publishing until the trusted publisher on npmjs is
-# updated to match. Provenance attestations are generated automatically.
+# updated to match. Provenance attestations are generated automatically. OIDC
+# publishing needs npm >= 11.5.1: the shared workflow runs on Node 24 (npm 11)
+# and, because this workflow grants `id-token: write`, fails before tagging if
+# npm is older.
+#
+# The npm publish runs in semantic-release's `prepare` step (via
+# @semantic-release/exec; @semantic-release/npm only writes the version, with
+# npmPublish: false), because semantic-release pushes the git tag after `prepare`
+# and before `publish`. Publishing in `publish` left bot-automerge-v1.0.0 as a tag
+# with no package when npm failed. Publishing first means a failed publish aborts
+# the release before any tag exists.
 
 on:
   push:
@@ -29,28 +42,6 @@ permissions:
 
 jobs:
   release:
-    name: Release
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0 # semantic-release needs full history + tags
-          persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 22
-          cache: pnpm
-      # Trusted publishing needs npm >= 11.5.1. @semantic-release/npm verifies the
-      # OIDC exchange itself, but `npm publish` runs on the runner's npm, and the
-      # npm bundled with Node 22 (10.x) can't do the exchange. It fails with
-      # ENEEDAUTH, as the first 1.0.1 attempt did.
-      - name: Upgrade npm for trusted publishing
-        run: npm install --global npm@11.20.0
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run build
-      - name: Release
-        run: pnpm exec semantic-release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    uses: rmartz/semantic-release-ci/.github/workflows/semantic-release.yml@dbcbcd8e0425ae4c0aa294d6595566ac4643a83d # v1.1.0
+    with:
+      build-command: pnpm run build

@@ -1,0 +1,19 @@
+name: Release check
+
+# Checks the semantic-release config on every PR through the fleet's shared
+# workflow (rmartz/semantic-release-ci): the commit-analyzer and the changelog
+# render run against this PR's commits with the same toolchain the Release
+# workflow publishes with, so a broken release config is caught before merge
+# rather than on the post-merge Release run. Posts
+# `release-check / release-check`. It runs on every PR (no `on.paths`), so the
+# check always posts.
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  release-check:
+    uses: rmartz/semantic-release-ci/.github/workflows/release-check.yml@dbcbcd8e0425ae4c0aa294d6595566ac4643a83d # v1.1.0

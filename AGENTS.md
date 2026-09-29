@@ -83,8 +83,9 @@ file as off-limits just because bootstrap once seeded it.
   would update it. A delay between a CLI release here and the action's bump is
   ordinary weekly Dependabot lag, not a bug.
 - **CI, releases, and labels are owned here:** typecheck / lint / format / test /
-  build + a `Release dry-run` that validates the semantic-release config on PRs
-  ([ci.yml](.github/workflows/ci.yml)), the PR-title lint + the
+  build ([ci.yml](.github/workflows/ci.yml)), the shared
+  `release-check / release-check` that validates the semantic-release config on
+  PRs ([release-check.yml](.github/workflows/release-check.yml)), the PR-title lint + the
   `commit-convention` tripwire, semantic-release, and the hardened `dependabot.yml`
   are all in place. `ai-ensure-labels` / `ai-verify-squash-setting` remain useful
   one-shot helpers, but this repo owns its `.github/` config going forward.
@@ -132,16 +133,25 @@ Most are enforced by eslint; the intent:
   …). The repo squash-merges using the **PR title**, so it is the only
   conventional subject that reaches `main` — a non-conventional title makes
   semantic-release skip the release.
-- **Releases are automated** via semantic-release: a push to `main` analyzes the
-  Conventional-Commit history since the last `bot-automerge-v*` tag and, when a
-  release is warranted, publishes `@rmartz/bot-automerge` to npmjs (public) and
-  creates the git tag + GitHub Release — no release PR, no commit-back. npm auth
-  is OIDC trusted publishing tied to the `release.yml` filename (no `NPM_TOKEN`;
-  renaming that workflow breaks publishing until the trusted publisher on npmjs is
-  updated; `npm publish` also needs npm >= 11.5.1, so `release.yml` upgrades the
-  runner's npm before releasing), the built-in `GITHUB_TOKEN` covers tags and releases, and
-  `tagFormat` is pinned to `bot-automerge-v${version}` in `.releaserc.json` for
-  continuity with the prior release-please tags.
+- **Releases are automated** via semantic-release, through the shared
+  `rmartz/semantic-release-ci` workflow that `release.yml` pins: a push to `main`
+  analyzes the Conventional-Commit history since the last `bot-automerge-v*` tag
+  and, when a release is warranted, publishes `@rmartz/bot-automerge` to npmjs
+  (public) and creates the git tag + GitHub Release — no release PR, no
+  commit-back. The toolchain lives in semantic-release-ci; the options stay in
+  `.releaserc.json`. npm auth is OIDC trusted publishing tied to the `release.yml`
+  filename (no `NPM_TOKEN`; renaming that workflow breaks publishing until the
+  trusted publisher on npmjs is updated; `npm publish` also needs npm >= 11.5.1,
+  which the shared workflow's Node 24 provides — don't pin an older Node), the
+  built-in `GITHUB_TOKEN` covers tags and releases, and `tagFormat` is pinned to
+  `bot-automerge-v${version}` in `.releaserc.json` for continuity with the prior
+  release-please tags.
+- **Publish before tagging.** semantic-release pushes the tag after `prepare` and
+  before `publish`, so `.releaserc.json` runs `npm publish` in `prepare` (via
+  `@semantic-release/exec`, with `@semantic-release/npm` set to
+  `npmPublish: false`). A failed publish then aborts before any tag exists. Don't
+  move the publish back to `@semantic-release/npm`: that is how
+  `bot-automerge-v1.0.0` became a tag with no package.
 
 ## Agent directive files
 
