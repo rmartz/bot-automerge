@@ -19,6 +19,10 @@
  * check `@rmartz/github` for transport/rate-limit fixes and port them across.
  * The git subprocess runs through our own inlined `boundedRun` (#7), so there is
  * no `@rmartz/agent-runtime` edge either.
+ *
+ * LOCAL ADDITION (#30): `ghCallDetailed` is `ghCall` plus the last attempt's exit
+ * code and stderr, so the bin can explain an unreadable PR. `ghCall` is now a thin
+ * wrapper over it with unchanged behaviour. Upstream has no equivalent yet.
  */
 import { boundedRun } from './bounded-subprocess.js';
 
@@ -52,19 +56,60 @@ function isRateLimited(text: string): boolean {
   return t.includes('rate limit') || t.includes('rate-limit');
 }
 
+/**
+ * Why a `gh` invocation failed: its exit code (`null` when it never exited
+ * cleanly — killed on timeout, or failed to spawn) and its stderr.
+ */
+export interface GhFailure {
+  code: number | null;
+  stderr: string;
+}
+
 async function runTransport(
   { argv, stdin }: Transport,
   cwd: string | undefined,
-): Promise<{ stdout: string | null; stderr: string }> {
+): Promise<{ stdout: string | null; failure: GhFailure }> {
   const [command, ...args] = argv;
-  if (command === undefined) return { stdout: null, stderr: 'empty argv' };
+  if (command === undefined) return { stdout: null, failure: { code: null, stderr: 'empty argv' } };
   try {
     const r = await boundedRun(command, args, { timeoutMs: GH_API_TIMEOUT_MS, cwd, input: stdin });
-    if (r.code === 0) return { stdout: r.stdout, stderr: '' };
-    return { stdout: null, stderr: r.stderr || '' };
+    if (r.code === 0) return { stdout: r.stdout, failure: { code: 0, stderr: '' } };
+    const stderr = r.timedOut ? `timed out after ${GH_API_TIMEOUT_MS}ms` : r.stderr || '';
+    return { stdout: null, failure: { code: r.timedOut ? null : r.code, stderr } };
   } catch (err) {
-    return { stdout: null, stderr: err instanceof Error ? err.message : String(err) };
+    return {
+      stdout: null,
+      failure: { code: null, stderr: err instanceof Error ? err.message : String(err) },
+    };
   }
+}
+
+/**
+ * {@link ghCall}, but on total failure also returns the LAST attempt's
+ * {@link GhFailure}, so a caller can say why (a rejected token, a rate limit, a
+ * missing PR) instead of only that it failed. `failure` is `null` on success.
+ */
+export async function ghCallDetailed(
+  primary: Transport,
+  fallback: Transport | null,
+  opts: GhCallOptions = {},
+): Promise<{ stdout: string | null; failure: GhFailure | null }> {
+  const sleep = opts.sleep ?? realSleep;
+  let lastFailure: GhFailure = { code: null, stderr: 'no transport attempted' };
+  for (const transport of [primary, fallback]) {
+    if (!transport) continue;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      const { stdout, failure } = await runTransport(transport, opts.cwd);
+      if (stdout !== null) return { stdout, failure: null };
+      lastFailure = failure;
+      // This pool is exhausted — don't burn retries on it; switch transports.
+      if (isRateLimited(failure.stderr)) break;
+      if (attempt < MAX_RETRIES) {
+        await sleep(Math.min(BACKOFF_BASE_MS * 2 ** attempt, BACKOFF_CAP_MS));
+      }
+    }
+  }
+  return { stdout: null, failure: lastFailure };
 }
 
 /**
@@ -80,20 +125,7 @@ export async function ghCall(
   fallback: Transport | null,
   opts: GhCallOptions = {},
 ): Promise<string | null> {
-  const sleep = opts.sleep ?? realSleep;
-  for (const transport of [primary, fallback]) {
-    if (!transport) continue;
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      const { stdout, stderr } = await runTransport(transport, opts.cwd);
-      if (stdout !== null) return stdout;
-      // This pool is exhausted — don't burn retries on it; switch transports.
-      if (isRateLimited(stderr)) break;
-      if (attempt < MAX_RETRIES) {
-        await sleep(Math.min(BACKOFF_BASE_MS * 2 ** attempt, BACKOFF_CAP_MS));
-      }
-    }
-  }
-  return null;
+  return (await ghCallDetailed(primary, fallback, opts)).stdout;
 }
 
 /** Parse an `owner/repo` slug from a GitHub remote URL (ssh, https, or `git://`), or `null`. */

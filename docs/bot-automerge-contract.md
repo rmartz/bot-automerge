@@ -8,7 +8,7 @@ tags: [bot-automerge, auto-merge, contract, classification]
 # The bot-automerge eligibility contract
 
 bot-automerge enables GitHub-native auto-merge only for **trustworthy bot PRs**.
-Eligibility is a pure classification over a PR's author, head branch, head repository, labels, and
+Eligibility is a pure classification over a PR's author, head branch, head repository, and
 state, plus — for Dependabot — a caller-supplied semver update-type. The predicate
 lives in [`src/bot-automerge.ts`](../src/bot-automerge.ts) (`classifyBotPr`); its
 contract constants and the verdict shape live in [`src/index.ts`](../src/index.ts)
@@ -50,9 +50,13 @@ Otherwise, the PR is classified into one path, or none:
 1. **Dependabot** — author is the Dependabot app account. Both surface forms of
    its login are accepted: `dependabot[bot]` (REST/GraphQL) and `app/dependabot`
    (as the `gh` CLI reports it, which is what the `enable` path actually reads).
-2. **release-please** — the head branch starts with `release-please--` **OR** the
-   PR carries the `autorelease: pending` label. (Release-please's PR author varies
-   by setup, so detection keys off the branch/label markers, not the author.)
+2. **release-please** — the head branch starts with `release-please--`.
+   (Release-please's PR author varies by setup, so detection keys off the branch,
+   not the author.) The `autorelease: pending` label is **not** a signal: anyone
+   with triage permission can apply a label to any PR without being able to push
+   or merge, so honoring it would let them arm auto-merge on an unreviewed
+   same-repo PR (GHSA-4f7f-7fcp-gcm6). Pushing a `release-please--` branch
+   already requires write access.
 3. **Neither** — any other PR (an unrecognized bot or a human author) is **not a
    bot PR** and is never eligible; bot-automerge leaves it untouched.
 
@@ -121,3 +125,26 @@ label is logged, not fatal. Consumers seed the label through their label roster
 - `2` — usage error (bad command, missing `--pr`, unresolvable repo).
 - `1` — **only** an ungatherable/`gh` failure (the PR could not be read, or
   `gh pr merge` failed). On any failure, auto-merge is never enabled.
+
+### Failure messages
+
+On exit `1` the message names the cause, classified from `gh`'s stderr, and
+ends with the evidence: `gh`'s exit code and the first line of its stderr. For
+example:
+
+```text
+#64: could not read PR #64 — token rejected (from GH_TOKEN) — it is expired, revoked, or SSO-deauthorized; rotate it, or unset it to fall back to the workflow token (gh exited 1: HTTP 401: Bad credentials (https://api.github.com/graphql)) — not enabling auto-merge
+```
+
+| Cause              | Recognized by                                     | Fix                                        |
+| ------------------ | ------------------------------------------------- | ------------------------------------------ |
+| rate limited       | `rate limit`, HTTP 429, abuse detection           | wait for the reset, re-run                 |
+| token rejected     | HTTP 401, `Bad credentials`, SAML/SSO enforcement | rotate the token, or unset it              |
+| token lacks access | `Resource not accessible`, any other HTTP 403     | grant `contents` + `pull-requests` write   |
+| PR not found       | `Could not resolve to a PullRequest`, HTTP 404    | fix the PR number the caller passed        |
+| repo not found     | `Could not resolve to a Repository`               | check `--repo` and the token's repo access |
+| anything else      | —                                                 | read the echoed stderr line                |
+
+The token's **source** is the variable name `gh` authenticated with (`GH_TOKEN`,
+then `GITHUB_TOKEN`, then its stored login), never its value. Under `--json` the
+same text is the error verdict's `reason`.

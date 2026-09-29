@@ -28,7 +28,7 @@ prerequisite below.
 
 Every version pin in the chain is one Dependabot bumps:
 
-1. A release here publishes `@rmartz/bot-automerge` to GitHub Packages.
+1. A release here publishes `@rmartz/bot-automerge` to npmjs.
 2. `rmartz/bot-automerge-action` pins that version in its own `package.json`.
    Dependabot's `npm` ecosystem bumps it, and the merged bump cuts an action
    release.

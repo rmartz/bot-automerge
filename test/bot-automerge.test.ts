@@ -59,10 +59,8 @@ describe('detectBotPrType', () => {
     expect(detectBotPrType(releasePleasePr({ labels: [] }))).toBe('release-please');
   });
 
-  it('detects release-please by pending label (any branch name)', () => {
-    expect(detectBotPrType(releasePleasePr({ headRefName: 'some-other-branch' }))).toBe(
-      'release-please',
-    );
+  it('does NOT detect release-please by the pending label alone — GHSA-4f7f-7fcp-gcm6', () => {
+    expect(detectBotPrType(releasePleasePr({ headRefName: 'some-other-branch' }))).toBeNull();
   });
 
   it('is null for an unknown bot or a human author', () => {
@@ -148,10 +146,14 @@ describe('classifyBotPr — release-please path', () => {
     });
   });
 
-  it('is eligible when detected by the pending label alone', () => {
-    const v = classifyBotPr(releasePleasePr({ headRefName: 'chore/release' }));
-    expect(v.eligible).toBe(true);
-    expect(v.prType).toBe('release-please');
+  it('is NOT eligible for a same-repo PR carrying only the pending label', () => {
+    // A triage user can label any PR; the label must not arm auto-merge on a
+    // collaborator's feature PR (GHSA-4f7f-7fcp-gcm6).
+    const v = classifyBotPr(
+      releasePleasePr({ author: 'some-human', headRefName: 'feature/unreviewed' }),
+    );
+    expect(v.eligible).toBe(false);
+    expect(v.prType).toBeNull();
   });
 });
 

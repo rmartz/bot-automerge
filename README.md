@@ -67,8 +67,11 @@ pnpm run test         # vitest
 
 Versioned by [semantic-release](.releaserc.json). A push to `main` analyzes the
 Conventional-Commit history since the last `bot-automerge-v*` tag and, when a
-release is warranted, publishes the package to GitHub Packages (public) and
-creates the git tag + GitHub Release — no release PR and no commit-back, so the
+release is warranted, publishes the package to npmjs (public, via OIDC trusted
+publishing with provenance — no npm token) and creates the git tag + GitHub
+Release. Versions up to 0.2.1 were published to GitHub Packages and stay there for
+existing pins; new versions go to npmjs only. There is no release PR and no
+commit-back, so the
 built-in `GITHUB_TOKEN` suffices. `tagFormat` stays `bot-automerge-v${version}`
 for continuity with the prior release-please tags. A `Release dry-run` CI job
 validates the semantic-release config (that the changelog toolchain renders) on
