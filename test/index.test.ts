@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import {
   AUTOMERGE_HANDLED_LABEL,
@@ -26,6 +27,14 @@ describe('bot-automerge package contract', () => {
     expect(isBotAutomergeCommand('nope')).toBe(false);
     expect(isBotAutomergeCommand('')).toBe(false);
     expect(isBotAutomergeCommand(undefined)).toBe(false);
+  });
+
+  // bot-automerge-action invokes the bin by name, so renaming it is a breaking change.
+  it('publishes the CLI as the `bot-automerge` bin', () => {
+    const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
+      bin: unknown;
+    };
+    expect(pkg.bin).toEqual({ 'bot-automerge': './dist/bin/bot-automerge.js' });
   });
 });
 

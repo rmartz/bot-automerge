@@ -43,7 +43,7 @@ interface Args {
 
 function usage(): never {
   console.error(
-    'usage: ai-bot-automerge enable --pr <n> [--repo <o/r>] [--update-type <t>] [--json] [--cwd <path>]',
+    'usage: bot-automerge enable --pr <n> [--repo <o/r>] [--update-type <t>] [--json] [--cwd <path>]',
   );
   process.exit(2);
 }

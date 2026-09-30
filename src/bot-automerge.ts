@@ -3,7 +3,7 @@
  * turned on for this bot PR?"
  *
  * This is the eligibility enabler's decision, lifted into a pure, side-effect-free
- * function so it is trivially testable and the `ai-bot-automerge` bin stays a thin
+ * function so it is trivially testable and the `bot-automerge` bin stays a thin
  * arg-parse + `gh` shim. It knows nothing about `gh`, auto-merge enablement, or
  * exit codes — it maps a gathered PR view (author, head branch, labels, state) and
  * a caller-supplied Dependabot update-type to a {@link BotAutomergeVerdict}, and

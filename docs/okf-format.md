@@ -39,8 +39,7 @@ tags: [bot-automerge, ci] # optional
 ---
 ```
 
-This repo runs the **code-documentation flavour** of the `okf` check (the same
-one `ai-tools` uses), so it is stricter than the open OKF spec in two ways:
+This repo runs the **code-documentation flavour** of the `okf` check, so it is stricter than the open OKF spec in two ways:
 
 - **`type`** is required and constrained to a curated vocabulary — **`Skill`**,
   **`Script`**, **`Library`**, **`Design`**, plus **`Reference`** for concept /
