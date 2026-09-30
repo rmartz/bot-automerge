@@ -15,7 +15,7 @@ which computes the pre-auto-merge **safety verdict**. Where merge-safety answers
 "is it safe to merge this PR?", bot-automerge answers "is this a bot PR we trust
 enough to enable auto-merge on in the first place?".
 
-It ships as one CLI, `ai-bot-automerge`, with a single operation that
+It ships as one CLI, `bot-automerge`, with a single operation that
 [`rmartz/bot-automerge-action`](consuming.md) dispatches:
 
 ## `enable` — one bot PR

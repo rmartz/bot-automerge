@@ -11,8 +11,7 @@ counterpart to `@rmartz/merge-safety`'s safety verdict: bot-automerge classifies
 bot PR and, when eligible, runs `gh pr merge --auto --squash`. See
 [README.md](README.md) and the [documentation](docs/index.md).
 
-It was built per **rmartz/ai-tools#264**, mirroring the `rmartz/merge-safety`
-and `rmartz/repo-hygiene` splits. The `enable` classification (Dependabot
+It mirrors the `rmartz/merge-safety` and `rmartz/repo-hygiene` splits. The `enable` classification (Dependabot
 `patch`/`minor` bumps and release-please release PRs) lives in `src/` and first
 shipped in `v0.1.0`.
 The eligibility contract is in

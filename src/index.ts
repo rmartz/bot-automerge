@@ -7,13 +7,13 @@
  * it classifies a bot PR and, when eligible, turns on native auto-merge. Unlike
  * merge-safety it posts NO check-run and carries no fleet check-run contract.
  *
- * The classification + enablement implementation (and the `ai-bot-automerge` bin)
+ * The classification + enablement implementation (and the `bot-automerge` bin)
  * lives alongside it; this module is intentionally the narrow, frozen surface the
- * bot-automerge-action and consumers depend on. Extracted per rmartz/ai-tools#264.
+ * bot-automerge-action and consumers depend on.
  */
 
 /**
- * The operations the `ai-bot-automerge` CLI dispatches:
+ * The operations the `bot-automerge` CLI dispatches:
  * - `enable` — classify one bot PR and, when it is an eligible bot bump, turn on
  *   GitHub-native auto-merge (`gh pr merge --auto --squash`).
  */
@@ -45,7 +45,7 @@ export const DEPENDABOT_AUTHOR = 'dependabot[bot]';
 /**
  * The same Dependabot author login as the `gh` CLI reports it. `gh pr view
  * --json author` surfaces bot logins in `app/<slug>` form, not the REST/GraphQL
- * `<slug>[bot]` form — so the CLI path (`ai-bot-automerge enable`, which reads
+ * `<slug>[bot]` form — so the CLI path (`bot-automerge enable`, which reads
  * the author via `gh`) sees this, and detection must accept it alongside
  * {@link DEPENDABOT_AUTHOR}. (Missing this form is why every Dependabot PR was
  * misclassified as "not a recognized bot PR" — issue #22.)
