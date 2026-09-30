@@ -7,7 +7,7 @@ tags: [consumer, setup, auto-merge]
 
 # Consuming bot-automerge
 
-This repo publishes the `@rmartz/bot-automerge` package (the `ai-bot-automerge`
+This repo publishes the `@rmartz/bot-automerge` package (the `bot-automerge`
 CLI). It does **not** ship the workflow consumers call. Consumers use
 [`rmartz/bot-automerge-action`](https://github.com/rmartz/bot-automerge-action),
 and its

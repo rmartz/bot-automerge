@@ -94,7 +94,7 @@ merge-safety's guard so a post-merge event can't trigger a spurious action.
 
 ## What `enable` does — and does not do
 
-When the verdict is `eligible`, the `ai-bot-automerge enable` command turns on
+When the verdict is `eligible`, the `bot-automerge enable` command turns on
 GitHub-native auto-merge (`gh pr merge --auto --squash <pr>`) and then applies the
 **`auto-merge enabled`** label to the PR (the `AUTOMERGE_HANDLED_LABEL` constant,
 pinned by a package test). The label is a signal for **external processes** —

@@ -2,8 +2,8 @@
  * Inlined `gh` transport + label helpers — PORTED FROM `@rmartz/github@0.4.2`.
  *
  * Inlined (rather than depended on) to keep this package zero-runtime-dependency,
- * like `rmartz/repo-hygiene` (ai-tools#247) and `rmartz/merge-safety`, from which
- * these functions were copied verbatim. The `ai-bot-automerge` bin consumes the
+ * like `rmartz/repo-hygiene` and `rmartz/merge-safety`, from which
+ * these functions were copied verbatim. The `bot-automerge` bin consumes the
  * first two; the label helpers come along as part of the faithful port (retained
  * so a future need can use them without re-porting, and so this file stays a clean
  * diff against the `@rmartz/github` source it tracks):

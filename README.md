@@ -26,8 +26,7 @@ through a separate action repo:
 
 > **Status: implemented.** The `enable` classification — Dependabot `patch`/`minor`
 > bumps and release-please release PRs — shipped in `v0.1.0`, the first release to
-> GitHub Packages. It was built per
-> [ai-tools#264](https://github.com/rmartz/ai-tools/issues/264); see
+> GitHub Packages. See
 > [docs/bot-automerge-contract.md](docs/bot-automerge-contract.md) for the
 > eligibility contract.
 
