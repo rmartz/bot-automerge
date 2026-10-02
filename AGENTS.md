@@ -69,6 +69,11 @@ file as off-limits just because bootstrap once seeded it.
   through the [`merge-safety.yml`](.github/workflows/merge-safety.yml) caller,
   pinned and bumped by Dependabot — the `merge-safety` check-run is the gate our
   own GitHub-native auto-merge waits on (enabler vs. verdict).
+- **PR content checks via pr-policy:** the
+  [`pr-policy.yml`](.github/workflows/pr-policy.yml) caller runs the released
+  `rmartz/pr-policy-action` (SHA-pinned, Dependabot-bumped) on our PRs and posts
+  the `pr-policy` verdict. It passes `skip-uat: true`: this repo ships only a
+  library, so there is nothing to user-test.
 - **Auto-merge dogfoods bot-automerge itself:** the
   [`automerge.yml`](.github/workflows/automerge.yml) caller pins
   `rmartz/bot-automerge-action`'s reusable workflow (Dependabot-bumped) — exactly
