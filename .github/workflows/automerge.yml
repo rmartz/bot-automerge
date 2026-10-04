@@ -26,5 +26,5 @@ permissions:
 
 jobs:
   bot-automerge:
-    uses: rmartz/bot-automerge-action/.github/workflows/bot-automerge-reusable.yml@a46eafc1396993ffc04918f452b3d1c0e3c80f4f # v1.1.1
+    uses: rmartz/bot-automerge-action/.github/workflows/bot-automerge-reusable.yml@eb743a87c71cbca234e6787e8561928fe7c09aba # v2.1.4
     secrets: inherit
