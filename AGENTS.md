@@ -151,7 +151,7 @@ Most are enforced by eslint; the intent:
   `.releaserc.json`. npm auth is OIDC trusted publishing tied to the `release.yml`
   filename (no `NPM_TOKEN`; renaming that workflow breaks publishing until the
   trusted publisher on npmjs is updated; `npm publish` also needs npm >= 11.5.1,
-  which the shared workflow's Node 24 provides — don't pin an older Node), the
+  which the release job's Node 26 provides — never pin below Node 24), the
   built-in `GITHUB_TOKEN` covers tags and releases, and `tagFormat` is pinned to
   `bot-automerge-v${version}` in `.releaserc.json` for continuity with the prior
   release-please tags.

@@ -45,7 +45,7 @@ This repo no longer ships a reusable workflow; see
 
 ## Requirements
 
-- Node.js >= 20.11
+- Node.js >= 26
 - pnpm 9 (pinned via `packageManager`)
 
 Consuming repos need neither — `rmartz/bot-automerge-action` runs the published
