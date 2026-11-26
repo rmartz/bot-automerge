@@ -75,9 +75,6 @@ file as off-limits just because bootstrap once seeded it.
   the `pr-policy` verdict. It passes `skip-uat: true`: this repo skips UAT by
   choice (the library it ships is user-facing, so this is a decision, not a
   claim there's nothing to test).
-- **PR lifecycle labels:** the [`pr-lifecycle.yml`](.github/workflows/pr-lifecycle.yml)
-  caller runs `rmartz/pr-lifecycle-action` without arming, with `uat: 'off'` matching `skip-uat`: it keeps each PR's lifecycle labels current, marks every PR `no UAT needed`, and posts the `pr-lifecycle/sign-off` status (as the `rmartz-pr-lifecycle` App, which the `pr-policy` caller trusts). `automerge.yml` still does
-  the merging.
 - **Auto-merge dogfoods bot-automerge itself:** the
   [`automerge.yml`](.github/workflows/automerge.yml) caller pins
   `rmartz/bot-automerge-action`'s reusable workflow (Dependabot-bumped) — exactly
