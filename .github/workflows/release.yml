@@ -16,8 +16,8 @@ name: Release
 # (`release.yml`) in rmartz/bot-automerge, so there is no NPM_TOKEN secret.
 # Renaming this file breaks publishing until the trusted publisher on npmjs is
 # updated to match. Provenance attestations are generated automatically. OIDC
-# publishing needs npm >= 11.5.1: the shared workflow runs on Node 26 (npm 11)
-# and, because this workflow grants `id-token: write`, fails before tagging if
+# publishing needs npm >= 11.5.1: this caller runs the shared workflow on Node
+# 26 (npm 11) via `node-version` (it defaults to 24.x) and, because this workflow grants `id-token: write`, fails before tagging if
 # npm is older.
 #
 # The npm publish runs in semantic-release's `prepare` step (via
